@@ -75,6 +75,7 @@ class gfxContext;
 class nsIDOMEvent;
 class nsDisplayList;
 class nsDisplayListBuilder;
+class nsINode;
 class nsPIDOMWindow;
 struct nsPoint;
 struct nsIntPoint;
@@ -99,6 +100,7 @@ typedef short SelectionType;
 
 namespace mozilla {
 class EventStates;
+class EventDispatchingCallback;
 
 namespace dom {
 class Element;
@@ -198,6 +200,12 @@ public:
   virtual void Destroy() = 0;
 
   bool IsDestroying() { return mIsDestroying; }
+
+  virtual void HandleKeyEvent(nsINode* aTarget,
+                              mozilla::WidgetEvent* aEvent,
+                              nsEventStatus* aStatus = nullptr,
+                              mozilla::EventDispatchingCallback* aEventCB = nullptr,
+                              bool aIsBefore = false) = 0;
 
   /**
    * Make a one-way transition into a "zombie" state.  In this state,

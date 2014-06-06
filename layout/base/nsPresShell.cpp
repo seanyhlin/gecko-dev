@@ -152,25 +152,29 @@
 
 #endif
 
+#include "ChildIterator.h"
 #include "GeckoProfiler.h"
+#include "GeneratedEventClasses.h"
 #include "gfxPlatform.h"
 #include "Layers.h"
 #include "LayerTreeInvalidation.h"
+#include "mozilla/dom/BrowserElementDictionariesBinding.h"
 #include "mozilla/css/ImageLoader.h"
+#include "mozilla/gfx/2D.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/Telemetry.h"
 #include "nsCanvasFrame.h"
+#include "nsCxPusher.h"
+#include "nsIDOMCustomEvent.h"
+#include "nsIDOMHTMLElement.h"
+#include "nsIDragSession.h"
+#include "nsIFrameInlines.h"
 #include "nsIImageLoadingContent.h"
 #include "nsIScreen.h"
 #include "nsIScreenManager.h"
 #include "nsPlaceholderFrame.h"
 #include "nsTransitionManager.h"
-#include "ChildIterator.h"
 #include "RestyleManager.h"
-#include "nsIDOMHTMLElement.h"
-#include "nsIDragSession.h"
-#include "nsIFrameInlines.h"
-#include "mozilla/gfx/2D.h"
 
 #ifdef ANDROID
 #include "nsIDocShellTreeOwner.h"
@@ -7579,6 +7583,135 @@ nsIPresShell::DispatchGotOrLostPointerCaptureEvent(bool aIsGotCapture,
   if (event) {
     bool dummy;
     aCaptureTarget->DispatchEvent(event->InternalDOMEvent(), &dummy);
+  }
+}
+
+bool
+PresShell::DispatchKeyEvent(nsINode* aNode,
+                            WidgetEvent* aEvent,
+                            nsEventStatus* aStatus,
+                            mozilla::EventDispatchingCallback* aEventCB,
+                            bool aIsBefore)
+{
+  MOZ_ASSERT(aNode && aEvent);
+  MOZ_ASSERT(aEvent->message == NS_KEY_DOWN || aEvent->message == NS_KEY_UP);
+
+  nsCOMPtr<nsIDocument> document = aNode->OwnerDoc();
+  NS_ENSURE_TRUE(document, false);
+
+  nsCOMPtr<nsIPresShell> presShell = document->GetShell();
+  NS_ENSURE_TRUE(presShell, false);
+
+  nsRefPtr<nsPresContext> presContext = presShell->GetPresContext();
+  NS_ENSURE_TRUE(presContext, false);
+
+  nsCOMPtr<nsIDocShell> docShell = presContext->GetDocShell();
+  if (!docShell->GetIsBrowserOrApp()) {
+    return true;
+  }
+
+  nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(document);
+  NS_ENSURE_TRUE(domDoc, false);
+
+  nsCOMPtr<nsIDOMEvent> domEvent;
+  nsresult rv = domDoc->CreateEvent(NS_LITERAL_STRING("customevent"),
+                                    getter_AddRefs(domEvent));
+  NS_ENSURE_SUCCESS(rv, false);
+
+  nsCOMPtr<nsIGlobalObject> sgo = document->GetScopeObject();
+  NS_ENSURE_TRUE(sgo, false);
+
+  AutoJSContext cx;
+  JS::Rooted<JSObject*> global(cx, sgo->GetGlobalJSObject());
+  JSAutoCompartment ac(cx, global);
+
+  // Wrap event data
+  nsAutoString eventName;
+  JS::Rooted<JS::Value> val(cx);
+  if (aIsBefore) {
+    BeforeKeyEventDetail detail;
+    aEvent->AsKeyboardEvent()->AssignKeyEventData(detail);
+    NS_ENSURE_TRUE(detail.ToObject(cx, &val), false);
+
+    eventName = (aEvent->message == NS_KEY_DOWN) ?
+                NS_LITERAL_STRING("mozbrowserbeforekeydown") :
+                NS_LITERAL_STRING("mozbrowserbeforekeyup");
+  } else {
+    KeyEventDetail detail;
+    aEvent->AsKeyboardEvent()->AssignKeyEventData(detail);
+    NS_ENSURE_TRUE(detail.ToObject(cx, &val), false);
+
+    eventName = (aEvent->message == NS_KEY_DOWN) ?
+                NS_LITERAL_STRING("mozbrowserkeydown") :
+                NS_LITERAL_STRING("mozbrowserkeyup");
+  }
+
+  ErrorResult res;
+  nsCOMPtr<nsIDOMCustomEvent> domCustomEvent = do_QueryInterface(domEvent);
+  NS_ENSURE_TRUE(domCustomEvent, false);
+  CustomEvent* customEvent = static_cast<CustomEvent*>(domCustomEvent.get());
+  customEvent->InitCustomEvent(cx, eventName, true, true, val, res);
+  ENSURE_SUCCESS(res, false);
+
+  domCustomEvent->SetTrusted(true);
+  WidgetEvent* event = domEvent->GetInternalNSEvent();
+  event->mFlags.mWantReplyFromContentProcess = true;
+
+  // Dispatch event to iframe.
+  nsCOMPtr<EventTarget> et = do_QueryInterface(document->GetWindow());
+  if (NS_FAILED(EventDispatcher::Dispatch(et, mPresContext,
+                                          event, domEvent, aStatus))) {
+    return false;
+  }
+
+  return true;
+}
+
+void
+PresShell::HandleKeyEvent(nsINode* aTarget,
+                          WidgetEvent* aEvent,
+                          nsEventStatus* aStatus,
+                          EventDispatchingCallback* aEventCB,
+                          bool aIsBefore)
+{
+  WidgetKeyboardEvent* keyboardEvent = aEvent->AsKeyboardEvent();
+  NS_ENSURE_TRUE_VOID(keyboardEvent);
+
+  // Build up the mozbrowser chain.
+  nsCOMPtr<nsINode> node = aTarget;
+  nsTArray<nsCOMPtr<nsINode> > chain;
+  while (node) {
+    chain.AppendElement(node);
+    nsPIDOMWindow* win = node->OwnerDoc()->GetWindow();
+    node = win ? win->GetFrameElementInternal() : nullptr;
+  }
+
+  /**
+   * Dispatch event from the innermost element for
+   *   'mozbrowserbeforekeydown' and 'mozbrowserbeforekeyup'.
+   *
+   * Dispatch event from the outermost element for
+   *   'mozbrowserkeydown' and 'mozbrowserkeyup'.
+   */
+  size_t length = chain.Length();
+  for (int i = 0, j = length - 1; i < length; i++, j--) {
+    node = aIsBefore ? chain[j] : chain[i];
+
+    bool shouldDispatchOrigEvent = false;
+    if (node->NodeName().Find("IFRAME")) {
+      // Fallback: dispatch original key event to event target.
+      shouldDispatchOrigEvent = !DispatchKeyEvent(node, aEvent, aStatus,
+                                                  aEventCB, aIsBefore);
+     } else if (aIsBefore && !j) {
+      // Dispatch 'keydown' or 'keyup' to event target.
+      shouldDispatchOrigEvent = true;
+    }
+
+    if (shouldDispatchOrigEvent) {
+      EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
+                                aEvent, nullptr, aStatus, aEventCB);
+      break;
+    }
   }
 }
 

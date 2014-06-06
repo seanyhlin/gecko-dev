@@ -360,6 +360,12 @@ public:
 
   virtual void RestyleShadowRoot(mozilla::dom::ShadowRoot* aShadowRoot);
 
+  virtual void HandleKeyEvent(nsINode* aTarget,
+                              mozilla::WidgetEvent* aEvent,
+                              nsEventStatus* aStatus = nullptr,
+                              mozilla::EventDispatchingCallback* aEventCB = nullptr,
+                              bool aIsBefore = true) MOZ_OVERRIDE;
+
   void SetNextPaintCompressed() { mNextPaintCompressed = true; }
 
 protected:
@@ -381,6 +387,12 @@ protected:
                           nsEventStatus* aStatus,
                           nsPresShellEventCB* aEventCB,
                           bool aTouchIsNew);
+
+  bool DispatchKeyEvent(nsINode* aNode,
+                        mozilla::WidgetEvent* aEvent,
+                        nsEventStatus* aStatus = nullptr,
+                        mozilla::EventDispatchingCallback* aEventCB = nullptr,
+                        bool aIsBefore = false);
 
   void     WillDoReflow();
 
