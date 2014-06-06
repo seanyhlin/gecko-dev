@@ -324,6 +324,10 @@ var shell = {
     chromeEventHandler.addEventListener('keydown', this, true);
     chromeEventHandler.addEventListener('keypress', this, true);
     chromeEventHandler.addEventListener('keyup', this, true);
+    chromeEventHandler.addEventListener('mozbrowserbeforekeydown', this, true);
+    chromeEventHandler.addEventListener('mozbrowserbeforekeyup', this, true);
+    chromeEventHandler.addEventListener('mozbrowserafterkeyup', this, true);
+    chromeEventHandler.addEventListener('mozbrowserafterkeydown', this, true);
 
     window.addEventListener('MozApplicationManifest', this);
     window.addEventListener('mozfullscreenchange', this);
@@ -354,6 +358,10 @@ var shell = {
     window.removeEventListener('keydown', this, true);
     window.removeEventListener('keypress', this, true);
     window.removeEventListener('keyup', this, true);
+    window.removeEventListener('mozbrowserbeforekeydown', this, true);
+    window.removeEventListener('mozbrowserbeforekeyup', this, true);
+    window.removeEventListener('mozbrowserafterkeydown', this, true);
+    window.removeEventListener('mozbrowserafterkeyup', this, true);
     window.removeEventListener('MozApplicationManifest', this);
     window.removeEventListener('mozfullscreenchange', this);
     window.removeEventListener('sizemodechange', this);
@@ -369,8 +377,14 @@ var shell = {
   // and send a mozChromeEvent with detail.type set to xxx-button-press or
   // xxx-button-release instead.
   filterHardwareKeys: function shell_filterHardwareKeys(evt) {
+    var keyCode = evt.keyCode;
+/*    if (evt.type == 'mozbrowserbeforekeydown' ||
+        evt.type == 'mozbrowserbeforekeyup') {
+      keyCode = evt.detail.keyCode;
+    }*/
+
     var type;
-    switch (evt.keyCode) {
+    switch (keyCode) {
       case evt.DOM_VK_HOME:         // Home button
         type = 'home-button';
         break;
@@ -395,6 +409,22 @@ var shell = {
         break;
     }
 
+    if (evt.key == '') {
+      // FIXME
+      evt.stopImmediatePropagation();
+      evt.preventDefault();
+    } else {
+      dump("[shell] evt.type: " + evt.type + ", key: " + evt.key + ", keyCode: " + evt.keyCode);
+      dump("[shell] type: " + type);
+    }
+
+    if (evt.type == 'mozbrowserafterkeydown' ||
+        evt.type == 'mozbrowserafterkeyup') {
+      return;    
+    } else if (evt.type == 'mozbrowserbeforekeydown' ||
+               evt.type == 'mozbrowserbeforekeyup') {
+    }
+
     let mediaKeys = {
       'MediaNextTrack': 'media-next-track-button',
       'MediaPreviousTrack': 'media-previous-track-button',
@@ -416,17 +446,24 @@ var shell = {
       return;
     }
 
+    // FIXME: Hardware key events should be dispatched to applications directly.
+    // So, we shouldn't do stopImmediatePropagation and preventDefault
+    // afterwards. Besides, no need to send mozChromeEvent for hardware keys.
+    // Please see bug 989198 for further details.
+
     // If we didn't return, then the key event represents a hardware key
     // and we need to prevent it from propagating to Gaia
-    evt.stopImmediatePropagation();
-    evt.preventDefault(); // Prevent keypress events (when #501496 is fixed).
+    // evt.stopImmediatePropagation();
+    // evt.preventDefault(); // Prevent keypress events (when #501496 is fixed).
 
     // If it is a key down or key up event, we send a chrome event to Gaia.
     // If it is a keypress event we just ignore it.
     switch (evt.type) {
+      case 'mozbrowserbeforekeydown':
       case 'keydown':
         type = type + '-press';
         break;
+      case 'mozbrowserbeforekeyup':
       case 'keyup':
         type = type + '-release';
         break;
@@ -435,7 +472,8 @@ var shell = {
     }
 
     // Let applications receive the headset button key press/release event.
-    if (evt.keyCode == evt.DOM_VK_F1 && type !== this.lastHardwareButtonEventType) {
+    if (keyCode == evt.DOM_VK_F1 &&
+        type !== this.lastHardwareButtonEventType) {
       this.lastHardwareButtonEventType = type;
       gSystemMessenger.broadcastMessage('headset-button', type);
       return;
@@ -457,6 +495,7 @@ var shell = {
     if (type !== this.lastHardwareButtonEventType) {
       this.lastHardwareButtonEventType = type;
       this.sendChromeEvent({type: type});
+      dump('[shell] sendChromeEvent, type: ' + type);
     }
   },
 
@@ -469,6 +508,10 @@ var shell = {
       case 'keydown':
       case 'keyup':
       case 'keypress':
+      case 'mozbrowserbeforekeydown':
+      case 'mozbrowserbeforekeyup':
+      case 'mozbrowserafterkeydown':
+      case 'mozbrowserafterkeyup':
         this.filterHardwareKeys(evt);
         break;
       case 'mozfullscreenchange':

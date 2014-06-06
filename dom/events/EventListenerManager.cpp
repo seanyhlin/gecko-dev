@@ -54,6 +54,14 @@ using namespace hal;
     (!mIsMainThreadELM && ls->mTypeString.Equals(typeString)))) ||   \
    (allEvents && ls->mAllEvents))
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 static const uint32_t kAllMutationBits =
   NS_EVENT_BITS_MUTATION_SUBTREEMODIFIED |
   NS_EVENT_BITS_MUTATION_NODEINSERTED |
@@ -529,7 +537,7 @@ EventListenerManager::ListenerCanHandle(Listener* aListener,
 {
   // This is slightly different from EVENT_TYPE_EQUALS in that it returns
   // true even when aEvent->message == NS_USER_DEFINED_EVENT and
-  // aListener=>mEventType != NS_USER_DEFINED_EVENT as long as the atoms are
+  // aListener->mEventType != NS_USER_DEFINED_EVENT as long as the atoms are
   // the same
   if (aListener->mAllEvents) {
     return true;
@@ -541,6 +549,7 @@ EventListenerManager::ListenerCanHandle(Listener* aListener,
     return aListener->mTypeString.Equals(aEvent->typeString);
   }
   MOZ_ASSERT(mIsMainThreadELM);
+
   return aListener->mEventType == aEvent->message;
 }
 
@@ -552,6 +561,7 @@ EventListenerManager::AddEventListenerByType(
 {
   nsCOMPtr<nsIAtom> atom =
     mIsMainThreadELM ? do_GetAtom(NS_LITERAL_STRING("on") + aType) : nullptr;
+
   uint32_t type = nsContentUtils::GetEventId(atom);
   AddEventListenerInternal(aListenerHolder, type, atom, aType, aFlags);
 }

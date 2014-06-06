@@ -45,6 +45,7 @@
 #include "nsPresShell.h"
 #include "nsPresContext.h"
 #include "nsIContent.h"
+#include "mozilla/dom/BeforeAfterKeyboardEvent.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/Event.h" // for Event::GetEventPopupControlState()
 #include "mozilla/dom/ShadowRoot.h"
@@ -75,6 +76,8 @@
 #include "nsAutoPtr.h"
 #include "nsReadableUtils.h"
 #include "nsIPageSequenceFrame.h"
+#include "nsIPermissionManager.h"
+#include "nsIMozBrowserFrame.h"
 #include "nsCaret.h"
 #include "TouchCaret.h"
 #include "SelectionCarets.h"
@@ -84,6 +87,7 @@
 #include "nsILayoutHistoryState.h"
 #include "nsILineIterator.h" // for ScrollContentIntoView
 #include "pldhash.h"
+#include "mozilla/dom/BeforeAfterKeyboardEventBinding.h"
 #include "mozilla/dom/Touch.h"
 #include "mozilla/dom/PointerEventBinding.h"
 #include "nsIObserverService.h"
@@ -103,6 +107,14 @@
 #include "nsFontMetrics.h"
 #endif
 #include "PositionedEventTargeting.h"
+
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
 
 #include "nsIReflowCallback.h"
 
@@ -159,6 +171,7 @@
 #include "gfxPlatform.h"
 #include "Layers.h"
 #include "LayerTreeInvalidation.h"
+#include "mozilla/dom/BrowserElementDictionariesBinding.h"
 #include "mozilla/css/ImageLoader.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/Telemetry.h"
@@ -6793,6 +6806,254 @@ private:
   nsCOMPtr<nsIContent> mContent;
 };
 
+static bool
+CheckPermissionForBeforeAfterKeyboardEvent(Element* aElement)
+{
+  LOG("[%s] NodeName: %s", __FUNCTION__, NS_ConvertUTF16toUTF8(aElement->NodeName()).get());
+  // An element which is chrome-privileged should be able to handle before
+  // events and after events.
+  nsCOMPtr<nsIPrincipal> principal(aElement->NodePrincipal());
+  if (nsContentUtils::IsSystemPrincipal(principal)) {
+    LOG("system principal");
+    return true;
+  }
+
+  // An element which has "system" permission should be able to handle before
+  // events and after events.
+  nsCOMPtr<nsIPermissionManager> permMgr = services::GetPermissionManager();
+  uint32_t permission = nsIPermissionManager::DENY_ACTION;
+  if (permMgr) {
+    permMgr->TestPermissionFromPrincipal(principal, "system", &permission);
+    if (permission == nsIPermissionManager::ALLOW_ACTION) {
+      LOG("system permission");
+      return true;
+    }
+
+    // Check "embed-apps" permission for later use.
+    permission = nsIPermissionManager::DENY_ACTION;
+    permMgr->TestPermissionFromPrincipal(principal, "embed-apps", &permission);
+  }
+
+  // An element can handle before events and after events if the following
+  // conditions are met:
+  // 1) <iframe mozbrowser mozapp>
+  // 2) it has "embed-apps" permission.
+  nsCOMPtr<nsIMozBrowserFrame> browserFrame(do_QueryInterface(aElement));
+  if ((permission == nsIPermissionManager::ALLOW_ACTION) &&
+      browserFrame && browserFrame->GetReallyIsApp()) {
+    LOG("reallyIsApp, embed-apps");
+    return true;
+  }
+
+  LOG("failed to get");
+  return false;
+}
+
+static void
+BuildTargetChainForBeforeAfterKeyboardEvent(nsINode* aTarget,
+                                            nsTArray<nsCOMPtr<Element> >& aChain,
+                                            bool& aTargetIsIframe)
+{
+  LOG("[%s]", __FUNCTION__);
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aTarget));
+  nsCOMPtr<nsPIDOMWindow> window(aTarget->OwnerDoc()->GetWindow());
+  nsCOMPtr<Element> frameElement;
+
+  // Initialize frameElement.
+  if (content && content->IsHTML(nsGkAtoms::iframe)) {
+    aTargetIsIframe = true;
+    frameElement = do_QueryInterface(aTarget);
+  } else {
+    // If event target is not an iframe, dispatch keydown/keyup event to its
+    // window after dispatching before events to its ancestors.
+    aTargetIsIframe = false;
+
+    // And skip the event target and get its parent frame.
+    frameElement = window->GetFrameElementInternal();
+    if (frameElement) {
+      window = frameElement->OwnerDoc()->GetWindow();
+      frameElement = window ? window->GetFrameElementInternal() : nullptr;
+    }
+  }
+
+  // Check permission for all ancestors and add them into the target chain.
+  while (frameElement) {
+    if (CheckPermissionForBeforeAfterKeyboardEvent(frameElement)) {
+      aChain.AppendElement(frameElement);
+    }
+    window = frameElement->OwnerDoc()->GetWindow();
+    frameElement = window ? window->GetFrameElementInternal() : nullptr;
+  }
+}
+
+bool
+PresShell::DispatchBeforeKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> >& aChain,
+                                               const WidgetKeyboardEvent& aEvent,
+                                               size_t& aChainIndex)
+{
+  LOG("[%s]", __FUNCTION__);
+
+  uint32_t message =
+    (aEvent.message == NS_KEY_DOWN) ? NS_KEY_BEFORE_DOWN : NS_KEY_BEFORE_UP;
+  size_t length = aChain.Length();
+  if (!length) {
+    return true;
+  }
+
+  LOG("length: %lu", length);
+  nsCOMPtr<EventTarget> eventTarget;
+  // Dispatch before events from the outermost element.
+  for (int32_t i = length - 1; i >= 0; i--) {
+    eventTarget = do_QueryInterface(aChain[i]->OwnerDoc()->GetWindow());
+    if (!eventTarget) {
+      return false;
+    }
+
+    if (!aEvent.widget || aEvent.widget->Destroyed()) {
+      return false;
+    }
+ 
+    aChainIndex = i;
+    InternalBeforeAfterKeyboardEvent beforeEvent(aEvent.mFlags.mIsTrusted,
+                                                 message, aEvent.widget);
+    beforeEvent.AssignBeforeAfterKeyEventData(aEvent, false);
+    beforeEvent.mFlags.mWantReplyFromContentProcess = true;
+
+    nsCOMPtr<nsIDOMEvent> domEvent;
+    EventDispatcher::CreateEvent(eventTarget, mPresContext, &beforeEvent,
+                                 EmptyString(), getter_AddRefs(domEvent));
+    EventDispatcher::Dispatch(eventTarget, mPresContext, &beforeEvent,
+                              domEvent);
+
+    LOG("Destroyed: %d", aEvent.widget->Destroyed());
+    if (beforeEvent.mFlags.mDefaultPrevented) {
+      LOG("[%s] preventDefault, return %lu", __FUNCTION__, aChainIndex);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void
+PresShell::DispatchAfterKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> >& aChain,
+                                              const WidgetKeyboardEvent& aEvent,
+                                              bool aEmbeddedCancelled,
+                                              size_t aStartOffset)
+{
+  LOG("[%s]", __FUNCTION__);
+
+  uint32_t message =
+    (aEvent.message == NS_KEY_DOWN) ? NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
+  bool embeddedCancelled = aEmbeddedCancelled;
+  size_t length = aChain.Length();
+  if (!length) {
+    return;
+  }
+
+  nsCOMPtr<EventTarget> eventTarget;
+  nsCOMPtr<nsIDOMEvent> domEvent;
+  LOG("length: %lu, aStartOffset: %lu", length, aStartOffset);
+  // Dispatch after events from the innermost element.
+  for (uint32_t i = aStartOffset; i < length; i++) {
+    eventTarget = do_QueryInterface(aChain[i]->OwnerDoc()->GetWindow());
+    if (!eventTarget) {
+      return;
+    }
+
+    if (!aEvent.widget || aEvent.widget->Destroyed()) {
+      return;
+    }
+
+    InternalBeforeAfterKeyboardEvent afterEvent(aEvent.mFlags.mIsTrusted,
+                                                message, aEvent.widget);
+    afterEvent.AssignBeforeAfterKeyEventData(aEvent, false);
+    afterEvent.mEmbeddedCancelled = embeddedCancelled;
+    afterEvent.mFlags.mWantReplyFromContentProcess = true;
+    EventDispatcher::CreateEvent(eventTarget, mPresContext, &afterEvent,
+                                 EmptyString(), getter_AddRefs(domEvent));
+    EventDispatcher::Dispatch(eventTarget, mPresContext, &afterEvent,
+                              domEvent);
+
+    embeddedCancelled = afterEvent.mFlags.mDefaultPrevented;
+  }
+}
+
+void
+PresShell::DispatchAfterKeyboardEvent(nsINode* aTarget,
+                                      const WidgetKeyboardEvent& aEvent,
+                                      bool aEmbeddedCancelled)
+{
+  LOG("[PresShell] %s, message:%d, aTarget: %s, aEmbeddedCancelled: %d", __FUNCTION__, aEvent.message, NS_ConvertUTF16toUTF8(aTarget->NodeName()).get(), aEmbeddedCancelled);
+
+  MOZ_ASSERT(aTarget);
+
+  if (aEvent.message != NS_KEY_DOWN && aEvent.message != NS_KEY_UP) {
+    NS_WARNING("event message mistatch");
+    return;
+  }
+
+  // Build up a target chain. Each item in the chain will receive an after event.
+  nsAutoTArray<nsCOMPtr<Element>, 5> chain;
+  bool targetIsIframe;
+  BuildTargetChainForBeforeAfterKeyboardEvent(aTarget, chain, targetIsIframe);
+  DispatchAfterKeyboardEventInternal(chain, aEvent, aEmbeddedCancelled);
+}
+
+void
+PresShell::HandleKeyboardEvent(nsINode* aTarget,
+                               WidgetKeyboardEvent& aEvent,
+                               bool aEmbeddedCancelled,
+                               nsEventStatus* aStatus,
+                               EventDispatchingCallback* aEventCB)
+{
+  LOG("[PresShell] %s, message:%d, aTarget: %s, aEmbeddedCancelled: %d", __FUNCTION__, aEvent.message, NS_ConvertUTF16toUTF8(aTarget->NodeName()).get(), aEmbeddedCancelled);
+  if (aEvent.message == NS_KEY_PRESS) {
+    EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
+                              &aEvent, nullptr, aStatus, aEventCB);
+    return;
+  }
+
+  MOZ_ASSERT(aTarget);
+  MOZ_ASSERT(aEvent.message == NS_KEY_DOWN || aEvent.message == NS_KEY_UP);
+
+  // Build up a target chain. Each item in the chain will receive a before event.
+  nsAutoTArray<nsCOMPtr<Element>, 5> chain;
+  bool targetIsIframe;
+  BuildTargetChainForBeforeAfterKeyboardEvent(aTarget, chain, targetIsIframe);
+  LOG("targetIsIframe: %d", targetIsIframe);
+
+  // Dispatch before events. If each item in the chain handles the before
+  // event and doesn't prevent its default action, then the return value of
+  // the following function should be -1, and we should go further to dispatch
+  // the actual key event and after events. Otherwise, dispatch after events
+  // to partial items in the chain.
+  size_t chainIndex;
+  if (!DispatchBeforeKeyboardEventInternal(chain, aEvent, chainIndex)) {
+    // Dispatch after events to partial items.
+    DispatchAfterKeyboardEventInternal(chain, aEvent,
+                                       aEvent.mFlags.mDefaultPrevented, chainIndex);
+
+    // No need to forward the event to child process.
+    aEvent.mFlags.mNoCrossProcessBoundaryForwarding = true;
+    return;
+  }
+
+  if (targetIsIframe) {
+    return;
+  }
+
+  LOG("dispatch keydown/keyup event");
+  // Dispatch actual key event to event target.
+  aEvent.mFlags.mWantReplyFromContentProcess = true;
+  EventDispatcher::Dispatch(aTarget, mPresContext,
+                            &aEvent, nullptr, aStatus, aEventCB);
+
+  // Dispatch after events to all items in the chain.
+  DispatchAfterKeyboardEventInternal(chain, aEvent,
+                                     aEvent.mFlags.mDefaultPrevented);
+}
+
 nsresult
 PresShell::HandleEvent(nsIFrame* aFrame,
                        WidgetGUIEvent* aEvent,
@@ -7779,6 +8040,9 @@ PresShell::HandleEventInternal(WidgetEvent* aEvent, nsEventStatus* aStatus)
                 aEvent->mClass == eTextEventClass) {
               IMEStateManager::DispatchCompositionEvent(eventTarget,
                 mPresContext, aEvent, aStatus, eventCBPtr);
+            } else if (aEvent->mClass == eKeyboardEventClass) {
+              HandleKeyboardEvent(eventTarget, *(aEvent->AsKeyboardEvent()),
+                                  false, aStatus, eventCBPtr);
             } else {
               EventDispatcher::Dispatch(eventTarget, mPresContext,
                                         aEvent, nullptr, aStatus, eventCBPtr);

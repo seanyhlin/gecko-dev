@@ -74,7 +74,7 @@
 #include "GonkKeyMapping.h"
 
 #define LOG(args...)                                            \
-    __android_log_print(ANDROID_LOG_INFO, "Gonk" , ## args)
+    __android_log_print(ANDROID_LOG_INFO, "Key" , ## args)
 #ifdef VERBOSE_LOG_ENABLED
 # define VERBOSE_LOG(args...)                           \
     __android_log_print(ANDROID_LOG_INFO, "Gonk" , ## args)
@@ -434,6 +434,7 @@ KeyEventDispatcher::Dispatch()
 void
 KeyEventDispatcher::DispatchKeyDownEvent()
 {
+    LOG("[nsAppShell] KeyEventDispatcher::DispatchKeyDownEvent");
     nsEventStatus status = DispatchKeyEventInternal(NS_KEY_DOWN);
     if (status != nsEventStatus_eConsumeNoDefault) {
         DispatchKeyEventInternal(NS_KEY_PRESS);
@@ -443,6 +444,7 @@ KeyEventDispatcher::DispatchKeyDownEvent()
 void
 KeyEventDispatcher::DispatchKeyUpEvent()
 {
+    LOG("[nsAppShell] KeyEventDispatcher::DispatchKeyUpEvent");
     DispatchKeyEventInternal(NS_KEY_UP);
 }
 

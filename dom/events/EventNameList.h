@@ -1,55 +1,55 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+* License, v. 2.0. If a copy of the MPL was not distributed with this
+* file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /*
- * This file contains the list of event names that are exposed via IDL
- * on various objects.  It is designed to be used as inline input to
- * various consumers through the magic of C preprocessing.
- *
- * Each entry consists of 4 pieces of information:
- * 1) The name of the event
- * 2) The event ID (see BasicEvents.h)
- * 3) The event type (see the EventNameType enum in nsContentUtils.h)
- * 4) The event struct type for this event.
- * Items 2-4 might be empty strings for events for which they don't make sense.
- *
- * Event names that are exposed as content attributes on HTML elements
- * and as IDL attributes on Elements, Documents and Windows and have
- * no forwarding behavior should be enclosed in the EVENT macro.
- *
- * Event names that are exposed as content attributes on HTML elements
- * and as IDL attributes on Elements, Documents and Windows and are
- * forwarded from <body> and <frameset> to the Window should be
- * enclosed in the FORWARDED_EVENT macro.  If this macro is not
- * defined, it will be defined to be equivalent to EVENT.
- *
- * Event names that are exposed as IDL attributes on Windows only
- * should be enclosed in the WINDOW_ONLY_EVENT macro.  If this macro
- * is not defined, it will be defined to the empty string.
- *
- * Event names that are exposed as content and IDL attributes on
- * <body> and <frameset>, which forward them to the Window, and are
- * exposed as IDL attributes on the Window should be enclosed in the
- * WINDOW_EVENT macro.  If this macro is not defined, it will be
- * defined to be equivalent to WINDOW_ONLY_EVENT.
- *
- * Touch-specific event names should be enclosed in TOUCH_EVENT.  They
- * are otherwise equivalent to those enclosed in EVENT.  If
- * TOUCH_EVENT is not defined, it will be defined to the empty string.
- *
- * Event names that are only exposed as IDL attributes on Documents
- * should be enclosed in the DOCUMENT_ONLY_EVENT macro.  If this macro is
- * not defined, it will be defined to the empty string.
- *
- * Event names that are not exposed as IDL attributes at all should be
- * enclosed in NON_IDL_EVENT.  If NON_IDL_EVENT is not defined, it
- * will be defined to the empty string.
- *
- * If you change which macros event names are enclosed in, please
- * update the tests for bug 689564 and bug 659350 as needed.
- */
+* This file contains the list of event names that are exposed via IDL
+* on various objects.  It is designed to be used as inline input to
+* various consumers through the magic of C preprocessing.
+*
+* Each entry consists of 4 pieces of information:
+* 1) The name of the event
+* 2) The event ID (see BasicEvents.h)
+* 3) The event type (see the EventNameType enum in nsContentUtils.h)
+* 4) The event struct type for this event.
+* Items 2-4 might be empty strings for events for which they don't make sense.
+*
+* Event names that are exposed as content attributes on HTML elements
+* and as IDL attributes on Elements, Documents and Windows and have
+* no forwarding behavior should be enclosed in the EVENT macro.
+*
+* Event names that are exposed as content attributes on HTML elements
+* and as IDL attributes on Elements, Documents and Windows and are
+* forwarded from <body> and <frameset> to the Window should be
+* enclosed in the FORWARDED_EVENT macro.  If this macro is not
+* defined, it will be defined to be equivalent to EVENT.
+*
+* Event names that are exposed as IDL attributes on Windows only
+* should be enclosed in the WINDOW_ONLY_EVENT macro.  If this macro
+* is not defined, it will be defined to the empty string.
+*
+* Event names that are exposed as content and IDL attributes on
+* <body> and <frameset>, which forward them to the Window, and are
+* exposed as IDL attributes on the Window should be enclosed in the
+* WINDOW_EVENT macro.  If this macro is not defined, it will be
+* defined to be equivalent to WINDOW_ONLY_EVENT.
+*
+* Touch-specific event names should be enclosed in TOUCH_EVENT.  They
+* are otherwise equivalent to those enclosed in EVENT.  If
+* TOUCH_EVENT is not defined, it will be defined to the empty string.
+*
+* Event names that are only exposed as IDL attributes on Documents
+* should be enclosed in the DOCUMENT_ONLY_EVENT macro.  If this macro is
+* not defined, it will be defined to the empty string.
+*
+* Event names that are not exposed as IDL attributes at all should be
+* enclosed in NON_IDL_EVENT.  If NON_IDL_EVENT is not defined, it
+* will be defined to the empty string.
+*
+* If you change which macros event names are enclosed in, please
+* update the tests for bug 689564 and bug 659350 as needed.
+*/
 
 #ifdef ID_TO_EVENT
 #ifdef EVENT
@@ -148,95 +148,111 @@
 #endif /* BEFOREUNLOAD_EVENT */
 
 EVENT(abort,
-      NS_IMAGE_ABORT,
-      EventNameType_All,
-      eBasicEventClass)
+  NS_IMAGE_ABORT,
+  EventNameType_All,
+  eBasicEventClass)
 EVENT(canplay,
-      NS_CANPLAY,
-      EventNameType_HTML,
-      eBasicEventClass)
+  NS_CANPLAY,
+  EventNameType_HTML,
+  eBasicEventClass)
 EVENT(canplaythrough,
-      NS_CANPLAYTHROUGH,
-      EventNameType_HTML,
-      eBasicEventClass)
+  NS_CANPLAYTHROUGH,
+  EventNameType_HTML,
+  eBasicEventClass)
 EVENT(change,
-      NS_FORM_CHANGE,
-      EventNameType_HTMLXUL,
-      eBasicEventClass)
+  NS_FORM_CHANGE,
+  EventNameType_HTMLXUL,
+  eBasicEventClass)
 EVENT(click,
-      NS_MOUSE_CLICK,
-      EventNameType_All,
-      eMouseEventClass)
+  NS_MOUSE_CLICK,
+  EventNameType_All,
+  eMouseEventClass)
 EVENT(contextmenu,
-      NS_CONTEXTMENU,
-      EventNameType_HTMLXUL,
-      eMouseEventClass)
+  NS_CONTEXTMENU,
+  EventNameType_HTMLXUL,
+  eMouseEventClass)
 // Not supported yet
 // EVENT(cuechange)
 EVENT(dblclick,
-      NS_MOUSE_DOUBLECLICK,
-      EventNameType_HTMLXUL,
-      eMouseEventClass)
+  NS_MOUSE_DOUBLECLICK,
+  EventNameType_HTMLXUL,
+  eMouseEventClass)
 EVENT(drag,
-      NS_DRAGDROP_DRAG,
-      EventNameType_HTMLXUL,
-      eDragEventClass)
+  NS_DRAGDROP_DRAG,
+  EventNameType_HTMLXUL,
+  eDragEventClass)
 EVENT(dragend,
-      NS_DRAGDROP_END,
-      EventNameType_HTMLXUL,
-      eDragEventClass)
+  NS_DRAGDROP_END,
+  EventNameType_HTMLXUL,
+  eDragEventClass)
 EVENT(dragenter,
-      NS_DRAGDROP_ENTER,
-      EventNameType_HTMLXUL,
-      eDragEventClass)
+  NS_DRAGDROP_ENTER,
+  EventNameType_HTMLXUL,
+  eDragEventClass)
 EVENT(dragleave,
-      NS_DRAGDROP_LEAVE_SYNTH,
-      EventNameType_HTMLXUL,
-      eDragEventClass)
+  NS_DRAGDROP_LEAVE_SYNTH,
+  EventNameType_HTMLXUL,
+  eDragEventClass)
 EVENT(dragover,
-      NS_DRAGDROP_OVER_SYNTH,
-      EventNameType_HTMLXUL,
-      eDragEventClass)
+  NS_DRAGDROP_OVER_SYNTH,
+  EventNameType_HTMLXUL,
+  eDragEventClass)
 EVENT(dragstart,
-      NS_DRAGDROP_START,
-      EventNameType_HTMLXUL,
-      eDragEventClass)
+  NS_DRAGDROP_START,
+  EventNameType_HTMLXUL,
+  eDragEventClass)
 EVENT(drop,
-      NS_DRAGDROP_DROP,
-      EventNameType_HTMLXUL,
-      eDragEventClass)
+  NS_DRAGDROP_DROP,
+  EventNameType_HTMLXUL,
+  eDragEventClass)
 EVENT(durationchange,
-      NS_DURATIONCHANGE,
-      EventNameType_HTML,
-      eBasicEventClass)
+  NS_DURATIONCHANGE,
+  EventNameType_HTML,
+  eBasicEventClass)
 EVENT(emptied,
-      NS_EMPTIED,
-      EventNameType_HTML,
-      eBasicEventClass)
+  NS_EMPTIED,
+  EventNameType_HTML,
+  eBasicEventClass)
 EVENT(ended,
-      NS_ENDED,
-      EventNameType_HTML,
-      eBasicEventClass)
+  NS_ENDED,
+  EventNameType_HTML,
+  eBasicEventClass)
 EVENT(input,
-      NS_EDITOR_INPUT,
-      EventNameType_HTMLXUL,
-      eEditorInputEventClass)
+  NS_EDITOR_INPUT,
+  EventNameType_HTMLXUL,
+  eEditorInputEventClass)
 EVENT(invalid,
-      NS_FORM_INVALID,
-      EventNameType_HTMLXUL,
-      eBasicEventClass)
+  NS_FORM_INVALID,
+  EventNameType_HTMLXUL,
+  eBasicEventClass)
 EVENT(keydown,
-      NS_KEY_DOWN,
-      EventNameType_HTMLXUL,
-      eKeyboardEventClass)
+  NS_KEY_DOWN,
+  EventNameType_HTMLXUL,
+  eKeyboardEventClass)
 EVENT(keypress,
-      NS_KEY_PRESS,
-      EventNameType_HTMLXUL,
-      eKeyboardEventClass)
+  NS_KEY_PRESS,
+  EventNameType_HTMLXUL,
+  eKeyboardEventClass)
 EVENT(keyup,
-      NS_KEY_UP,
-      EventNameType_HTMLXUL,
-      eKeyboardEventClass)
+  NS_KEY_UP,
+  EventNameType_HTMLXUL,
+  eKeyboardEventClass)
+NON_IDL_EVENT(mozbrowserbeforekeydown,
+              NS_KEY_BEFORE_DOWN,
+              EventNameType_None,
+              eBeforeAfterKeyboardEventClass)
+NON_IDL_EVENT(mozbrowserafterkeydown,
+              NS_KEY_AFTER_DOWN,
+              EventNameType_None,
+              eBeforeAfterKeyboardEventClass)
+NON_IDL_EVENT(mozbrowserbeforekeyup,
+              NS_KEY_BEFORE_UP,
+              EventNameType_None,
+              eBeforeAfterKeyboardEventClass)
+NON_IDL_EVENT(mozbrowserafterkeyup,
+              NS_KEY_AFTER_UP,
+              EventNameType_None,
+              eBeforeAfterKeyboardEventClass)
 EVENT(loadeddata,
       NS_LOADEDDATA,
       EventNameType_HTML,

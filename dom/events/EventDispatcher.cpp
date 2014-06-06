@@ -32,6 +32,14 @@
 #include "mozilla/TouchEvents.h"
 #include "mozilla/unused.h"
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 namespace mozilla {
 
 using namespace dom;
@@ -699,8 +707,13 @@ EventDispatcher::CreateEvent(EventTarget* aOwner,
       return NS_NewDOMScrollAreaEvent(aDOMEvent, aOwner, aPresContext,
                                       aEvent->AsScrollAreaEvent());
     case eKeyboardEventClass:
+      LOG("NS_KEY_EVENT, message:%d", aEvent->message);
       return NS_NewDOMKeyboardEvent(aDOMEvent, aOwner, aPresContext,
                                     aEvent->AsKeyboardEvent());
+    case eBeforeAfterKeyboardEventClass:
+      LOG("NS_BEFORE_AFTER_KEYBOARD_EVENT, message:%d", aEvent->message);
+      return NS_NewDOMBeforeAfterKeyboardEvent(aDOMEvent, aOwner, aPresContext,
+                                               aEvent->AsBeforeAfterKeyboardEvent());
     case eCompositionEventClass:
       return NS_NewDOMCompositionEvent(aDOMEvent, aOwner, aPresContext,
                                        aEvent->AsCompositionEvent());
