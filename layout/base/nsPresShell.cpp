@@ -7538,6 +7538,11 @@ PresShell::HandleEventInternal(WidgetEvent* aEvent, nsEventStatus* aStatus)
                 aEvent->eventStructType == NS_TEXT_EVENT) {
               IMEStateManager::DispatchCompositionEvent(eventTarget,
                 mPresContext, aEvent, aStatus, eventCBPtr);
+            } else if (aEvent->message == NS_KEY_DOWN ||
+                       aEvent->message == NS_KEY_UP) {
+              // Dispatch 'mozbrowserbeforekeydown'/'mozbrowserbeforekeyup'
+              // and 'keydown'/'keyup'.
+              HandleKeyEvent(eventTarget, aEvent, aStatus, eventCBPtr, true);
             } else {
               EventDispatcher::Dispatch(eventTarget, mPresContext,
                                         aEvent, nullptr, aStatus, eventCBPtr);
@@ -7661,6 +7666,13 @@ PresShell::DispatchKeyEvent(nsINode* aNode,
   nsCOMPtr<EventTarget> et = do_QueryInterface(document->GetWindow());
   if (NS_FAILED(EventDispatcher::Dispatch(et, mPresContext,
                                           event, domEvent, aStatus))) {
+    return false;
+  }
+
+  // When 'mozbrowserbeforekeydown' or 'mozbrowserbeforekeyup' is prevented,
+  // dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' event immediately.
+  if (event->mFlags.mDefaultPrevented && aIsBefore) {
+    HandleKeyEvent(aNode, aEvent, aStatus, aEventCB);
     return false;
   }
 

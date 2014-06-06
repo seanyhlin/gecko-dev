@@ -49,6 +49,7 @@
 #include "nsIWidget.h"
 #include "nsIWindowWatcher.h"
 #include "nsPIDOMWindow.h"
+#include "nsPresShell.h"
 #include "nsPrintfCString.h"
 #include "nsServiceManagerUtils.h"
 #include "nsThreadUtils.h"
@@ -1274,9 +1275,6 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
   NS_ENSURE_TRUE(mFrameElement, true);
 
   WidgetKeyboardEvent localEvent(event);
-  // Set mNoCrossProcessBoundaryForwarding to avoid this event from
-  // being infinitely redispatched and forwarded to the child again.
-  localEvent.mFlags.mNoCrossProcessBoundaryForwarding = true;
 
   // Here we convert the WidgetEvent that we received to an nsIDOMEvent
   // to be able to dispatch it to the <browser> element as the target element.
@@ -1286,7 +1284,17 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
   nsPresContext* presContext = presShell->GetPresContext();
   NS_ENSURE_TRUE(presContext, true);
 
-  EventDispatcher::Dispatch(mFrameElement, presContext, &localEvent);
+  if (event.message == NS_KEY_DOWN ||
+      event.message == NS_KEY_UP) {
+    // Dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' for out-of-process case.
+    presShell->HandleKeyEvent(mFrameElement, &localEvent);
+  } else {
+    // Set mNoCrossProcessBoundaryForwarding to avoid this event from
+    // being infinitely redispatched and forwarded to the child again.
+    localEvent.mFlags.mNoCrossProcessBoundaryForwarding = true;
+
+    EventDispatcher::Dispatch(mFrameElement, presContext, &localEvent);
+  }
   return true;
 }
 
