@@ -8,6 +8,14 @@
 
 #include "TabParent.h"
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 #include "AppProcessChecker.h"
 #include "IDBFactory.h"
 #include "IndexedDBParent.h"
@@ -53,6 +61,7 @@
 #include "nsIWindowWatcher.h"
 #include "nsPIDOMWindow.h"
 #include "nsPIWindowWatcher.h"
+#include "nsPresShell.h"
 #include "nsPrintfCString.h"
 #include "nsServiceManagerUtils.h"
 #include "nsThreadUtils.h"
@@ -918,20 +927,21 @@ TabParent::RecvRequestNativeKeyBindings(const WidgetKeyboardEvent& aEvent,
   return true;
 }
 
-bool TabParent::SendRealKeyEvent(WidgetKeyboardEvent& event)
+bool TabParent::SendRealKeyEvent(WidgetKeyboardEvent& aEvent)
 {
+  LOG("[TabParent] %s, %d", __FUNCTION__, aEvent.message);
+
   if (mIsDestroyed) {
     return false;
   }
-  MaybeForwardEventToRenderFrame(event, nullptr);
-  if (!MapEventCoordinatesForChildProcess(&event)) {
+  MaybeForwardEventToRenderFrame(aEvent, nullptr);
+  if (!MapEventCoordinatesForChildProcess(&aEvent)) {
     return false;
   }
 
-
   MaybeNativeKeyBinding bindings;
   bindings = void_t();
-  if (event.message == NS_KEY_PRESS) {
+  if (aEvent.message == NS_KEY_PRESS) {
     nsCOMPtr<nsIWidget> widget = GetWidget();
 
     AutoInfallibleTArray<mozilla::CommandInt, 4> singleLine;
@@ -939,18 +949,17 @@ bool TabParent::SendRealKeyEvent(WidgetKeyboardEvent& event)
     AutoInfallibleTArray<mozilla::CommandInt, 4> richText;
 
     widget->ExecuteNativeKeyBinding(nsIWidget::NativeKeyBindingsForSingleLineEditor,
-                                    event, DoCommandCallback, &singleLine);
+                                    aEvent, DoCommandCallback, &singleLine);
     widget->ExecuteNativeKeyBinding(nsIWidget::NativeKeyBindingsForMultiLineEditor,
-                                    event, DoCommandCallback, &multiLine);
+                                    aEvent, DoCommandCallback, &multiLine);
     widget->ExecuteNativeKeyBinding(nsIWidget::NativeKeyBindingsForRichTextEditor,
-                                    event, DoCommandCallback, &richText);
+                                    aEvent, DoCommandCallback, &richText);
 
     if (!singleLine.IsEmpty() || !multiLine.IsEmpty() || !richText.IsEmpty()) {
       bindings = NativeKeyBinding(singleLine, multiLine, richText);
     }
   }
-
-  return PBrowserParent::SendRealKeyEvent(event, bindings);
+  return PBrowserParent::SendRealKeyEvent(aEvent, bindings);
 }
 
 bool TabParent::SendRealTouchEvent(WidgetTouchEvent& event)
@@ -1357,11 +1366,12 @@ TabParent::GetChildProcessOffset()
 }
 
 bool
-TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
+TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& aEvent)
 {
+  LOG("[TabParent] %s, %d, %d", __FUNCTION__, aEvent.mFlags.mDefaultPrevented, aEvent.message);
   NS_ENSURE_TRUE(mFrameElement, true);
 
-  WidgetKeyboardEvent localEvent(event);
+  WidgetKeyboardEvent localEvent(aEvent);
   // Set mNoCrossProcessBoundaryForwarding to avoid this event from
   // being infinitely redispatched and forwarded to the child again.
   localEvent.mFlags.mNoCrossProcessBoundaryForwarding = true;
@@ -1370,11 +1380,21 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
   // to be able to dispatch it to the <browser> element as the target element.
   nsIDocument* doc = mFrameElement->OwnerDoc();
   nsIPresShell* presShell = doc->GetShell();
-  NS_ENSURE_TRUE(presShell, true);
-  nsPresContext* presContext = presShell->GetPresContext();
-  NS_ENSURE_TRUE(presContext, true);
+  if (NS_WARN_IF(!presShell)) {
+    return true;
+  }
 
-  EventDispatcher::Dispatch(mFrameElement, presContext, &localEvent);
+  if (localEvent.message == NS_KEY_PRESS) {
+    nsPresContext* presContext = presShell->GetPresContext();
+    EventDispatcher::Dispatch(mFrameElement, presContext, &localEvent);
+    return true;
+  }
+      
+  nsCOMPtr<nsINode> node(do_QueryInterface(mFrameElement));
+  LOG("[TabParent] mDefaultPrevented: %d", aEvent.mFlags.mDefaultPrevented);
+  presShell->DispatchAfterKeyboardEvent(node, localEvent,
+                                        aEvent.mFlags.mDefaultPrevented);
+
   return true;
 }
 

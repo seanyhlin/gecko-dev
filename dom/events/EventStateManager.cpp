@@ -92,6 +92,14 @@
 #import <ApplicationServices/ApplicationServices.h>
 #endif
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 namespace mozilla {
 
 using namespace dom;
@@ -651,8 +659,12 @@ EventStateManager::PreHandleEvent(nsPresContext* aPresContext,
       }
     }
     // then fall through...
+  case NS_KEY_BEFORE_DOWN:
   case NS_KEY_DOWN:
+  case NS_KEY_AFTER_DOWN:
+  case NS_KEY_BEFORE_UP:
   case NS_KEY_UP:
+  case NS_KEY_AFTER_UP:
     {
       nsIContent* content = GetFocusedContent();
       if (content)
@@ -1089,6 +1101,11 @@ EventStateManager::DispatchCrossProcessEvent(WidgetEvent* aEvent,
     return false;
   }
 
+  if (aEvent->mClass == eKeyboardEventClass ||
+      aEvent->mClass == eBeforeAfterKeyboardEventClass) {
+    LOG("[%s] mClass: %d", __FUNCTION__, aEvent->mClass);
+  }
+
   switch (aEvent->mClass) {
   case eMouseEventClass: {
     return remote->SendRealMouseEvent(*aEvent->AsMouseEvent());
@@ -1189,6 +1206,10 @@ CrossProcessSafeEvent(const WidgetEvent& aEvent)
 bool
 EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
                                            nsEventStatus *aStatus) {
+  if (aEvent->message == NS_KEY_BEFORE_DOWN) {
+    LOG("[%s] %d, %d, %d", __FUNCTION__, *aStatus == nsEventStatus_eConsumeNoDefault, aEvent->mFlags.mNoCrossProcessBoundaryForwarding, CrossProcessSafeEvent(*aEvent));
+    LOG("eBeforeAfterKeyboardEventClass is not safe");
+  }
   if (*aStatus == nsEventStatus_eConsumeNoDefault ||
       aEvent->mFlags.mNoCrossProcessBoundaryForwarding ||
       !CrossProcessSafeEvent(*aEvent)) {
@@ -1240,6 +1261,9 @@ EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
   }
 
   if (targets.Length() == 0) {
+    if (aEvent->message == NS_KEY_BEFORE_DOWN) {
+      LOG("[%s] target length is 0", __FUNCTION__);
+    }
     return false;
   }
 
@@ -2677,7 +2701,6 @@ EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
 
   bool dispatchedToContentProcess = HandleCrossProcessEvent(aEvent,
                                                             aStatus);
-
   mCurrentTarget = aTargetFrame;
   mCurrentTargetContent = nullptr;
 
@@ -3162,7 +3185,9 @@ EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
     GenerateDragDropEnterExit(presContext, aEvent->AsDragEvent());
     break;
 
+  case NS_KEY_BEFORE_UP:
   case NS_KEY_UP:
+  case NS_KEY_AFTER_UP:
     break;
 
   case NS_KEY_PRESS:

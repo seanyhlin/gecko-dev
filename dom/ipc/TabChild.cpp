@@ -6,6 +6,14 @@
 
 #include "base/basictypes.h"
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 #include "TabChild.h"
 
 #include "Layers.h"
@@ -2185,13 +2193,14 @@ TabChild::RequestNativeKeyBindings(AutoCacheNativeKeyCommands* aAutoCache,
 }
 
 bool
-TabChild::RecvRealKeyEvent(const WidgetKeyboardEvent& event,
+TabChild::RecvRealKeyEvent(const WidgetKeyboardEvent& aEvent,
                            const MaybeNativeKeyBinding& aBindings)
 {
+  LOG("[TabChild] %s, %d", __FUNCTION__, aEvent.message);
   PuppetWidget* widget = static_cast<PuppetWidget*>(mWidget.get());
   AutoCacheNativeKeyCommands autoCache(widget);
 
-  if (event.message == NS_KEY_PRESS) {
+  if (aEvent.message == NS_KEY_PRESS) {
     if (aBindings.type() == MaybeNativeKeyBinding::TNativeKeyBinding) {
       const NativeKeyBinding& bindings = aBindings;
       autoCache.Cache(bindings.singleLineCommands(),
@@ -2203,15 +2212,15 @@ TabChild::RecvRealKeyEvent(const WidgetKeyboardEvent& event,
   }
   // If content code called preventDefault() on a keydown event, then we don't
   // want to process any following keypress events.
-  if (event.message == NS_KEY_PRESS && mIgnoreKeyPressEvent) {
+  if (aEvent.message == NS_KEY_PRESS && mIgnoreKeyPressEvent) {
     return true;
   }
 
-  WidgetKeyboardEvent localEvent(event);
+  WidgetKeyboardEvent localEvent(aEvent);
   localEvent.widget = mWidget;
   nsEventStatus status = DispatchWidgetEvent(localEvent);
 
-  if (event.message == NS_KEY_DOWN) {
+  if (aEvent.message == NS_KEY_DOWN) {
     mIgnoreKeyPressEvent = status == nsEventStatus_eConsumeNoDefault;
   }
 
