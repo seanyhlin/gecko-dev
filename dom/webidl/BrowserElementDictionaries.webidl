@@ -23,6 +23,27 @@ dictionary OpenWindowEventDetail {
   Node? frameElement = null;
 };
 
+dictionary BeforeKeyEventDetail {
+  unsigned long charCode = 0;
+  unsigned long keyCode = 0;
+
+  boolean       altKey = false;
+  boolean       ctrlKey = false;
+  boolean       shiftKey = false;
+  boolean       metaKey = false;
+
+  unsigned long location = 0;
+  boolean       repeat = false;
+  boolean       isComposing = false;
+
+  DOMString     key = "";
+  DOMString     code = "";
+};
+
+dictionary KeyEventDetail : BeforeKeyEventDetail {
+  boolean embeddedCancelled = false;
+};
+
 dictionary DOMWindowResizeEventDetail {
   long width = 0;
   long height = 0;

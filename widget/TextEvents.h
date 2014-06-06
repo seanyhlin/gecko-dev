@@ -10,6 +10,7 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/BasicEvents.h"
+#include "mozilla/dom/BrowserElementDictionariesBinding.h"
 #include "mozilla/EventForwards.h" // for KeyNameIndex, temporarily
 #include "mozilla/TextRange.h"
 #include "nsCOMPtr.h"
@@ -187,6 +188,33 @@ public:
     // is destroyed.
     mNativeKeyEvent = nullptr;
     mUniqueId = aEvent.mUniqueId;
+  }
+
+  void AssignKeyEventData(mozilla::dom::BeforeKeyEventDetail& aDetail)
+  {
+    aDetail.mCharCode = charCode;
+    aDetail.mKeyCode = keyCode;
+
+    aDetail.mAltKey = IsAlt();
+    aDetail.mCtrlKey = IsControl();
+    aDetail.mShiftKey = IsShift();
+    aDetail.mMetaKey = IsMeta();
+
+    aDetail.mLocation = location;
+    aDetail.mRepeat = mIsRepeat;
+    aDetail.mIsComposing = mIsComposing;
+
+    nsAutoString key, code;
+    GetDOMKeyName(key);
+    aDetail.mKey = key;
+    GetDOMCodeName(code);
+    aDetail.mCode = code;
+  }
+
+  void AssignKeyEventData(mozilla::dom::KeyEventDetail& aDetail)
+  {
+    AssignKeyEventData((mozilla::dom::BeforeKeyEventDetail&)aDetail);
+    aDetail.mEmbeddedCancelled = mFlags.mDefaultPrevented;
   }
 };
 
