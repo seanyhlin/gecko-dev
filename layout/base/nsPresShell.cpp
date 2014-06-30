@@ -7645,7 +7645,7 @@ PresShell::DispatchMozBrowserKeyEvent(nsINode* aNode,
   JS::Rooted<JS::Value> val(cx);
   if (aIsBefore) {
     BeforeKeyEventDetail detail;
-    aEvent->AsKeyboardEvent()->AssignKeyEventData(detail);
+    aEvent->AsKeyboardEvent()->CopyTo(detail);
     NS_ENSURE_TRUE(detail.ToObject(cx, &val), false);
 
     eventName = (aEvent->message == NS_KEY_DOWN) ?
@@ -7653,7 +7653,7 @@ PresShell::DispatchMozBrowserKeyEvent(nsINode* aNode,
                 NS_LITERAL_STRING("mozbrowserbeforekeyup");
   } else {
     KeyEventDetail detail;
-    aEvent->AsKeyboardEvent()->AssignKeyEventData(detail);
+    aEvent->AsKeyboardEvent()->CopyTo(detail);
     NS_ENSURE_TRUE(detail.ToObject(cx, &val), false);
 
     eventName = (aEvent->message == NS_KEY_DOWN) ?

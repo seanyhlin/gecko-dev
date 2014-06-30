@@ -10,9 +10,9 @@
 
 #include "mozilla/Assertions.h"
 #include "mozilla/BasicEvents.h"
-#include "mozilla/dom/BrowserElementDictionariesBinding.h"
 #include "mozilla/EventForwards.h" // for KeyNameIndex, temporarily
 #include "mozilla/TextRange.h"
+#include "mozilla/dom/BrowserElementDictionariesBinding.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsITransferable.h"
@@ -190,7 +190,7 @@ public:
     mUniqueId = aEvent.mUniqueId;
   }
 
-  void AssignKeyEventData(mozilla::dom::BeforeKeyEventDetail& aDetail)
+  void CopyTo(dom::BeforeKeyEventDetail& aDetail)
   {
     aDetail.mCharCode = charCode;
     aDetail.mKeyCode = keyCode;
@@ -204,16 +204,13 @@ public:
     aDetail.mRepeat = mIsRepeat;
     aDetail.mIsComposing = mIsComposing;
 
-    nsAutoString key, code;
-    GetDOMKeyName(key);
-    aDetail.mKey = key;
-    GetDOMCodeName(code);
-    aDetail.mCode = code;
+    GetDOMKeyName(aDetail.mKey);
+    GetDOMCodeName(aDetail.mCode);
   }
 
-  void AssignKeyEventData(mozilla::dom::KeyEventDetail& aDetail)
+  void CopyTo(dom::KeyEventDetail& aDetail)
   {
-    AssignKeyEventData((mozilla::dom::BeforeKeyEventDetail&)aDetail);
+    CopyTo((mozilla::dom::BeforeKeyEventDetail&)aDetail);
     aDetail.mEmbeddedCancelled = mFlags.mDefaultPrevented;
   }
 };
