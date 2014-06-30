@@ -102,6 +102,14 @@
 #endif
 #include "PositionedEventTargeting.h"
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 #include "nsIReflowCallback.h"
 
 #include "nsPIDOMWindow.h"
@@ -7592,12 +7600,13 @@ nsIPresShell::DispatchGotOrLostPointerCaptureEvent(bool aIsGotCapture,
 }
 
 bool
-PresShell::DispatchKeyEvent(nsINode* aNode,
-                            WidgetEvent* aEvent,
-                            nsEventStatus* aStatus,
-                            mozilla::EventDispatchingCallback* aEventCB,
-                            bool aIsBefore)
+PresShell::DispatchMozBrowserKeyEvent(nsINode* aNode,
+                                      WidgetEvent* aEvent,
+                                      nsEventStatus* aStatus,
+                                      mozilla::EventDispatchingCallback* aEventCB,
+                                      bool aIsBefore)
 {
+  LOG("[PresShell] %s", __FUNCTION__);
   MOZ_ASSERT(aNode && aEvent);
   MOZ_ASSERT(aEvent->message == NS_KEY_DOWN || aEvent->message == NS_KEY_UP);
 
@@ -7611,8 +7620,9 @@ PresShell::DispatchKeyEvent(nsINode* aNode,
   NS_ENSURE_TRUE(presContext, false);
 
   nsCOMPtr<nsIDocShell> docShell = presContext->GetDocShell();
+  LOG("[PresShell] IsBrowserOrApp: %d", docShell->GetIsBrowserOrApp());
   if (!docShell->GetIsBrowserOrApp()) {
-    return true;
+    return false;
   }
 
   nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(document);
@@ -7651,6 +7661,7 @@ PresShell::DispatchKeyEvent(nsINode* aNode,
                 NS_LITERAL_STRING("mozbrowserkeyup");
   }
 
+  LOG("[PresShell] eventName: %s", NS_ConvertUTF16toUTF8(eventName).get());
   ErrorResult res;
   nsCOMPtr<nsIDOMCustomEvent> domCustomEvent = do_QueryInterface(domEvent);
   NS_ENSURE_TRUE(domCustomEvent, false);
@@ -7673,9 +7684,8 @@ PresShell::DispatchKeyEvent(nsINode* aNode,
   // dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' event immediately.
   if (event->mFlags.mDefaultPrevented && aIsBefore) {
     HandleKeyEvent(aNode, aEvent, aStatus, aEventCB);
-    return false;
   }
-
+ 
   return true;
 }
 
@@ -7686,6 +7696,8 @@ PresShell::HandleKeyEvent(nsINode* aTarget,
                           EventDispatchingCallback* aEventCB,
                           bool aIsBefore)
 {
+  LOG("[PresShell] %s, aIsBefore: %d", __FUNCTION__, aIsBefore);
+
   WidgetKeyboardEvent* keyboardEvent = aEvent->AsKeyboardEvent();
   NS_ENSURE_TRUE_VOID(keyboardEvent);
 
@@ -7708,21 +7720,22 @@ PresShell::HandleKeyEvent(nsINode* aTarget,
   size_t length = chain.Length();
   for (int i = 0, j = length - 1; i < length; i++, j--) {
     node = aIsBefore ? chain[j] : chain[i];
-
-    bool shouldDispatchOrigEvent = false;
-    if (node->NodeName().Find("IFRAME")) {
-      // Fallback: dispatch original key event to event target.
-      shouldDispatchOrigEvent = !DispatchKeyEvent(node, aEvent, aStatus,
-                                                  aEventCB, aIsBefore);
-     } else if (aIsBefore && !j) {
-      // Dispatch 'keydown' or 'keyup' to event target.
-      shouldDispatchOrigEvent = true;
+    nsAutoString tagName;
+    node->Tag()->ToString(tagName);
+    if (aIsBefore) {
+      LOG("[PresShell] node[%d], j, %s, %s", j, NS_ConvertUTF16toUTF8(node->NodeName()).get(), NS_ConvertUTF16toUTF8(tagName).get());
+    } else {
+      LOG("[PresShell] node[%d], i, %s, %s", i, NS_ConvertUTF16toUTF8(node->NodeName()).get(), NS_ConvertUTF16toUTF8(tagName).get());
     }
 
-    if (shouldDispatchOrigEvent) {
+    if (node->NodeName().Find("IFRAME") != -1) {
+      LOG("find IFRAME");
+      DispatchMozBrowserKeyEvent(node, aEvent, aStatus, aEventCB, aIsBefore);
+    } else if (aIsBefore) {
+      LOG("no IFRAME");
+      aEvent->mFlags.mWantReplyFromContentProcess = true;
       EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
                                 aEvent, nullptr, aStatus, aEventCB);
-      break;
     }
   }
 }

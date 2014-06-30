@@ -364,7 +364,7 @@ public:
                               mozilla::WidgetEvent* aEvent,
                               nsEventStatus* aStatus = nullptr,
                               mozilla::EventDispatchingCallback* aEventCB = nullptr,
-                              bool aIsBefore = true) MOZ_OVERRIDE;
+                              bool aIsBefore = false) MOZ_OVERRIDE;
 
   void SetNextPaintCompressed() { mNextPaintCompressed = true; }
 
@@ -388,11 +388,11 @@ protected:
                           nsPresShellEventCB* aEventCB,
                           bool aTouchIsNew);
 
-  bool DispatchKeyEvent(nsINode* aNode,
-                        mozilla::WidgetEvent* aEvent,
-                        nsEventStatus* aStatus = nullptr,
-                        mozilla::EventDispatchingCallback* aEventCB = nullptr,
-                        bool aIsBefore = false);
+  bool DispatchMozBrowserKeyEvent(nsINode* aNode,
+                                  mozilla::WidgetEvent* aEvent,
+                                  nsEventStatus* aStatus = nullptr,
+                                  mozilla::EventDispatchingCallback* aEventCB = nullptr,
+                                  bool aIsBefore = false);
 
   void     WillDoReflow();
 

@@ -8,6 +8,14 @@
 
 #include "TabParent.h"
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 #include "AppProcessChecker.h"
 #include "IDBFactory.h"
 #include "IndexedDBParent.h"
@@ -842,6 +850,9 @@ TabParent::RecvRequestNativeKeyBindings(const WidgetKeyboardEvent& aEvent,
 
 bool TabParent::SendRealKeyEvent(WidgetKeyboardEvent& event)
 {
+  if (event.message == NS_KEY_DOWN || event.message == NS_KEY_UP) {
+    LOG("[TabParent] %s, %d", __FUNCTION__, event.message);
+  }
   if (mIsDestroyed) {
     return false;
   }
@@ -1272,6 +1283,9 @@ TabParent::GetChildProcessOffset()
 bool
 TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
 {
+  if (event.message == NS_KEY_DOWN || event.message == NS_KEY_UP) {
+    LOG("[TabParent] %s, %d, %d", __FUNCTION__, event.mFlags.mDefaultPrevented, event.message);
+  }
   NS_ENSURE_TRUE(mFrameElement, true);
 
   WidgetKeyboardEvent localEvent(event);

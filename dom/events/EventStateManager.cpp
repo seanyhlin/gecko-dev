@@ -1182,13 +1182,14 @@ EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
       aEvent->mFlags.mNoCrossProcessBoundaryForwarding ||
       !CrossProcessSafeEvent(*aEvent)) {
     // Dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' for in-process case.
-    nsIFrame* frame = GetEventTarget();
-    nsIContent* target = frame ? frame->GetContent() : nullptr;
-    nsIPresShell* presShell = mPresContext->PresShell();
-    if (target && presShell &&
-        !IsRemoteTarget(target) &&
-        !aEvent->mFlags.mDefaultPrevented) {
-      presShell->HandleKeyEvent(target, aEvent, aStatus);
+    if (aEvent->message == NS_KEY_DOWN ||
+        aEvent->message == NS_KEY_UP) {
+      nsIFrame* frame = GetEventTarget();
+      nsIContent* target = frame ? frame->GetContent() : nullptr;
+      nsIPresShell* presShell = mPresContext->PresShell();
+      if (target && presShell && !IsRemoteTarget(target)) {
+        presShell->HandleKeyEvent(target, aEvent, aStatus);
+      }
     }
     return false;
   }

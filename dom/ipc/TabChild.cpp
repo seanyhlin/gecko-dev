@@ -6,6 +6,14 @@
 
 #include "base/basictypes.h"
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 #include "TabChild.h"
 
 #include "Layers.h"
@@ -2076,6 +2084,9 @@ bool
 TabChild::RecvRealKeyEvent(const WidgetKeyboardEvent& event,
                            const MaybeNativeKeyBinding& aBindings)
 {
+  if (event.message == NS_KEY_DOWN || event.message == NS_KEY_UP) {
+    LOG("[TabChild] %s, %d", __FUNCTION__, event.message);
+  }
   PuppetWidget* widget = static_cast<PuppetWidget*>(mWidget.get());
   AutoCacheNativeKeyCommands autoCache(widget);
 
@@ -2097,6 +2108,9 @@ TabChild::RecvRealKeyEvent(const WidgetKeyboardEvent& event,
 
   WidgetKeyboardEvent localEvent(event);
   localEvent.widget = mWidget;
+  if (localEvent.message == NS_KEY_DOWN || localEvent.message == NS_KEY_UP) {
+    LOG("[TabChild] before dispatch: %d", localEvent.mFlags.mDefaultPrevented);
+  }
   nsEventStatus status = DispatchWidgetEvent(localEvent);
 
   if (event.message == NS_KEY_DOWN) {
@@ -2104,6 +2118,9 @@ TabChild::RecvRealKeyEvent(const WidgetKeyboardEvent& event,
   }
 
   if (localEvent.mFlags.mWantReplyFromContentProcess) {
+    if (localEvent.message == NS_KEY_DOWN || localEvent.message == NS_KEY_UP) {
+      LOG("[TabChild] after dispatch: %d", localEvent.mFlags.mDefaultPrevented);
+    }
     SendReplyKeyEvent(localEvent);
   }
 
