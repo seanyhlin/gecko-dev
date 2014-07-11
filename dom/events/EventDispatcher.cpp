@@ -701,6 +701,7 @@ EventDispatcher::CreateEvent(EventTarget* aOwner,
       return NS_NewDOMScrollAreaEvent(aDOMEvent, aOwner, aPresContext,
                                       aEvent->AsScrollAreaEvent());
     case NS_KEY_EVENT:
+      LOG("message:%d", aEvent->message);
       switch (aEvent->message) {
         case NS_KEY_BEFORE_DOWN:
         case NS_KEY_BEFORE_UP:

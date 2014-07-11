@@ -14,14 +14,6 @@
 #include "mozilla/TextEvents.h"
 #include "mozilla/TouchEvents.h"
 
-#undef LOG
-#if defined(MOZ_WIDGET_GONK)
-#include <android/log.h>
-#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
-#else
-#define LOG(args...) printf(args);
-#endif
-
 namespace IPC
 {
 
@@ -314,7 +306,6 @@ struct ParamTraits<mozilla::WidgetKeyboardEvent>
     WriteParam(aMsg, aParam.mIsRepeat);
     WriteParam(aMsg, aParam.location);
     WriteParam(aMsg, aParam.mUniqueId);
-    LOG("[nsGUIEventIPC] WriteParam");
     WriteParam(aMsg, aParam.mEmbeddedCancelled);
     // An OS-specific native event might be attached in |mNativeKeyEvent|,  but
     // that cannot be copied across process boundaries.
@@ -334,10 +325,9 @@ struct ParamTraits<mozilla::WidgetKeyboardEvent>
         ReadParam(aMsg, aIter, &aResult->isChar) &&
         ReadParam(aMsg, aIter, &aResult->mIsRepeat) &&
         ReadParam(aMsg, aIter, &aResult->location) &&
-        ReadParam(aMsg, aIter, &aResult->mUniqueId))
+        ReadParam(aMsg, aIter, &aResult->mUniqueId) &&
+        ReadParam(aMsg, aIter, &aResult->mEmbeddedCancelled))
     {
-      bool result = ReadParam(aMsg, aIter, &aResult->mEmbeddedCancelled);
-      LOG("[nsGUIEventIPC] ReadParam, %d", result);
       aResult->mKeyNameIndex = static_cast<mozilla::KeyNameIndex>(keyNameIndex);
       aResult->mCodeNameIndex =
         static_cast<mozilla::CodeNameIndex>(codeNameIndex);

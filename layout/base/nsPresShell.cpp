@@ -7606,7 +7606,7 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
                                          nsEventStatus* aStatus,
                                          mozilla::EventDispatchingCallback* aEventCB)
 {
-  LOG("[PresShell] %s", __FUNCTION__);
+  LOG("[PresShell] %s, message:%d", __FUNCTION__, aEvent->message);
   MOZ_ASSERT(aNode && aEvent);
   MOZ_ASSERT(aEvent->message == NS_KEY_BEFORE_DOWN ||
              aEvent->message == NS_KEY_BEFORE_UP ||
@@ -7619,17 +7619,19 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
   }
 
   nsCOMPtr<nsIPresShell> presShell = document->GetShell();
-  if (NS_WARN_IF(presShell)) {
+  if (NS_WARN_IF(!presShell)) {
     return;
   }
 
   nsRefPtr<nsPresContext> presContext = presShell->GetPresContext();
-  if (NS_WARN_IF(presContext)) {
+  if (NS_WARN_IF(!presContext)) {
     return;
   }
 
   nsCOMPtr<nsIDocShell> docShell = presContext->GetDocShell();
-  if (NS_WARN_IF(docShell) || !docShell->GetIsBrowserOrApp()) {
+  LOG("<4> DispatchKeyboardEventInternal, %d", docShell->GetIsBrowserOrApp());
+  if (NS_WARN_IF(!docShell) || !docShell->GetIsBrowserOrApp()) {
+    LOG("return");
     return;
   }
 
@@ -7638,6 +7640,7 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
     return;
   }
 
+  LOG("going to create event");
   nsCOMPtr<nsIDOMEvent> domEvent;
   EventDispatcher::CreateEvent(et, mPresContext,
                                static_cast<WidgetEvent*>(aEvent), EmptyString(),
@@ -7667,7 +7670,7 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
                                  nsEventStatus* aStatus,
                                  EventDispatchingCallback* aEventCB)
 {
-  LOG("[PresShell] %s", __FUNCTION__);
+  LOG("[PresShell] %s, message:%d", __FUNCTION__, aEvent->message);
   MOZ_ASSERT(aTarget && aEvent);
   MOZ_ASSERT(aEvent->message == NS_KEY_DOWN ||
              aEvent->message == NS_KEY_UP ||
@@ -7695,15 +7698,18 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
   size_t length = chain.Length();
   bool isBefore = (aEvent->message == NS_KEY_DOWN ||
                    aEvent->message == NS_KEY_UP);
+  LOG("isBefore:%d", isBefore);
+  uint32_t eventMessage = aEvent->message;
   for (int i = 0, j = length - 1; i < length; i++, j--) {
     node = isBefore ? chain[j] : chain[i];
+    LOG("i:%d, j:%d, %s, %d", i, j, NS_ConvertUTF16toUTF8(node->NodeName()).get(), node->NodeName().Find("IFRAME"));
     if (node->NodeName().Find("IFRAME") == -1) {
       break;
     }
 
     // Override message if needed and then dispatch the corresponding event.
     if (isBefore) {
-      aEvent->message = (aEvent->message == NS_KEY_DOWN) ?
+      aEvent->message = (eventMessage == NS_KEY_DOWN) ?
                         NS_KEY_BEFORE_DOWN : NS_KEY_BEFORE_UP;
     }
     DispatchKeyboardEventInternal(node, aEvent, aStatus, aEventCB);
