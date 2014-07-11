@@ -53,10 +53,10 @@ public:
 
   bool Repeat();
   bool IsComposing();
-  uint32_t CharCode();
-  uint32_t KeyCode();
-  virtual uint32_t Which() MOZ_OVERRIDE;
   uint32_t Location();
+  virtual uint32_t CharCode();
+  virtual uint32_t KeyCode();
+  virtual uint32_t Which() MOZ_OVERRIDE;
 
   void GetCode(nsAString& aCode);
 

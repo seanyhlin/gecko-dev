@@ -850,9 +850,16 @@ TabParent::RecvRequestNativeKeyBindings(const WidgetKeyboardEvent& aEvent,
 
 bool TabParent::SendRealKeyEvent(WidgetKeyboardEvent& event)
 {
-  if (event.message == NS_KEY_DOWN || event.message == NS_KEY_UP) {
+  if (event.message == NS_KEY_BEFORE_DOWN ||
+      event.message == NS_KEY_AFTER_DOWN) {
+    event.message = NS_KEY_DOWN;
+    LOG("[TabParent] %s, %d", __FUNCTION__, event.message);
+  } else if (event.message == NS_KEY_BEFORE_UP ||
+             event.message == NS_KEY_AFTER_UP) {
+    event.message = NS_KEY_UP;
     LOG("[TabParent] %s, %d", __FUNCTION__, event.message);
   }
+
   if (mIsDestroyed) {
     return false;
   }
@@ -860,7 +867,6 @@ bool TabParent::SendRealKeyEvent(WidgetKeyboardEvent& event)
   if (!MapEventCoordinatesForChildProcess(&event)) {
     return false;
   }
-
 
   MaybeNativeKeyBinding bindings;
   bindings = void_t();
@@ -1283,7 +1289,8 @@ TabParent::GetChildProcessOffset()
 bool
 TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
 {
-  if (event.message == NS_KEY_DOWN || event.message == NS_KEY_UP) {
+  if (event.message == NS_KEY_DOWN ||
+      event.message == NS_KEY_UP) { 
     LOG("[TabParent] %s, %d, %d", __FUNCTION__, event.mFlags.mDefaultPrevented, event.message);
   }
   NS_ENSURE_TRUE(mFrameElement, true);

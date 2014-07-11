@@ -52,6 +52,14 @@ using namespace hal;
     (!mIsMainThreadELM && ls->mTypeString.Equals(typeString)))) ||   \
    (allEvents && ls->mAllEvents))
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 static const uint32_t kAllMutationBits =
   NS_EVENT_BITS_MUTATION_SUBTREEMODIFIED |
   NS_EVENT_BITS_MUTATION_NODEINSERTED |
@@ -529,7 +537,7 @@ EventListenerManager::ListenerCanHandle(Listener* aListener,
 {
   // This is slightly different from EVENT_TYPE_EQUALS in that it returns
   // true even when aEvent->message == NS_USER_DEFINED_EVENT and
-  // aListener=>mEventType != NS_USER_DEFINED_EVENT as long as the atoms are
+  // aListener->mEventType != NS_USER_DEFINED_EVENT as long as the atoms are
   // the same
   if (aListener->mAllEvents) {
     return true;
@@ -541,6 +549,18 @@ EventListenerManager::ListenerCanHandle(Listener* aListener,
     return aListener->mTypeString.Equals(aEvent->typeString);
   }
   MOZ_ASSERT(mIsMainThreadELM);
+
+  if (aEvent->message == NS_KEY_BEFORE_DOWN ||
+      aEvent->message == NS_KEY_AFTER_DOWN ||
+      aEvent->message == NS_KEY_BEFORE_UP ||
+      aEvent->message == NS_KEY_AFTER_UP) {
+    return aListener->mTypeString.Equals(aEvent->typeString); 
+  }
+/*  if (aEvent->message == NS_KEY_DOWN ||
+      aEvent->message == NS_KEY_UP) {
+    return (aListener->mEventType == aEvent->message) ||
+           (aListener->mTypeString.Equals(aEvent->typeString));
+  }*/
   return aListener->mEventType == aEvent->message;
 }
 

@@ -94,6 +94,14 @@
 #import <ApplicationServices/ApplicationServices.h>
 #endif
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 namespace mozilla {
 
 using namespace dom;
@@ -642,6 +650,10 @@ EventStateManager::PreHandleEvent(nsPresContext* aPresContext,
     // then fall through...
   case NS_KEY_DOWN:
   case NS_KEY_UP:
+  case NS_KEY_BEFORE_DOWN:
+  case NS_KEY_AFTER_DOWN:
+  case NS_KEY_BEFORE_UP:
+  case NS_KEY_AFTER_UP:
     {
       nsIContent* content = GetFocusedContent();
       if (content)
@@ -1072,6 +1084,7 @@ bool
 EventStateManager::DispatchCrossProcessEvent(WidgetEvent* aEvent,
                                              nsFrameLoader* aFrameLoader,
                                              nsEventStatus *aStatus) {
+  LOG("[EventStateManager] %s, %d", __FUNCTION__, aEvent->eventStructType == NS_KEY_EVENT);
   PBrowserParent* remoteBrowser = aFrameLoader->GetRemoteBrowser();
   TabParent* remote = static_cast<TabParent*>(remoteBrowser);
   if (!remote) {
@@ -1178,12 +1191,17 @@ CrossProcessSafeEvent(const WidgetEvent& aEvent)
 bool
 EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
                                            nsEventStatus *aStatus) {
+  LOG("[EventStateManager] %s", __FUNCTION__);
   if (*aStatus == nsEventStatus_eConsumeNoDefault ||
       aEvent->mFlags.mNoCrossProcessBoundaryForwarding ||
       !CrossProcessSafeEvent(*aEvent)) {
     // Dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' for in-process case.
     if (aEvent->message == NS_KEY_DOWN ||
-        aEvent->message == NS_KEY_UP) {
+        aEvent->message == NS_KEY_UP ||
+        aEvent->message == NS_KEY_BEFORE_DOWN ||
+        aEvent->message == NS_KEY_BEFORE_UP ||
+        aEvent->message == NS_KEY_AFTER_DOWN ||
+        aEvent->message == NS_KEY_AFTER_UP) {
       nsIFrame* frame = GetEventTarget();
       nsIContent* target = frame ? frame->GetContent() : nullptr;
       nsIPresShell* presShell = mPresContext->PresShell();

@@ -384,33 +384,33 @@ var shell = {
   // xxx-button-release instead.
   filterHardwareKeys: function shell_filterHardwareKeys(evt) {
     var keyCode = evt.keyCode;
-    if (evt.type == 'mozbrowserbeforekeydown' ||
+/*    if (evt.type == 'mozbrowserbeforekeydown' ||
         evt.type == 'mozbrowserbeforekeyup') {
       keyCode = evt.detail.keyCode;
-    }
+    }*/
 
     var type;
     switch (keyCode) {
-      case Ci.nsIDOMKeyEvent.DOM_VK_HOME:         // Home button
+      case evt.DOM_VK_HOME:         // Home button
         type = 'home-button';
         break;
-      case Ci.nsIDOMKeyEvent.DOM_VK_SLEEP:        // Sleep button
-      case Ci.nsIDOMKeyEvent.DOM_VK_END:          // On desktop we don't have a sleep button
+      case evt.DOM_VK_SLEEP:        // Sleep button
+      case evt.DOM_VK_END:          // On desktop we don't have a sleep button
         type = 'sleep-button';
         break;
-      case Ci.nsIDOMKeyEvent.DOM_VK_PAGE_UP:      // Volume up button
+      case evt.DOM_VK_PAGE_UP:      // Volume up button
         type = 'volume-up-button';
         break;
-      case Ci.nsIDOMKeyEvent.DOM_VK_PAGE_DOWN:    // Volume down button
+      case evt.DOM_VK_PAGE_DOWN:    // Volume down button
         type = 'volume-down-button';
         break;
-      case Ci.nsIDOMKeyEvent.DOM_VK_ESCAPE:       // Back button (should be disabled)
+      case evt.DOM_VK_ESCAPE:       // Back button (should be disabled)
         type = 'back-button';
         break;
-      case Ci.nsIDOMKeyEvent.DOM_VK_CONTEXT_MENU: // Menu button
+      case evt.DOM_VK_CONTEXT_MENU: // Menu button
         type = 'menu-button';
         break;
-      case Ci.nsIDOMKeyEvent.DOM_VK_F1: // headset button
+      case evt.DOM_VK_F1: // headset button
         type = 'headset-button';
         break;
     }
@@ -464,7 +464,7 @@ var shell = {
 
     dump('[shell] type: ' + type);
     // Let applications receive the headset button key press/release event.
-    if (keyCode == Ci.nsIDOMKeyEvent.DOM_VK_F1 &&
+    if (keyCode == evt.DOM_VK_F1 &&
         type !== this.lastHardwareButtonEventType) {
       this.lastHardwareButtonEventType = type;
       gSystemMessenger.broadcastMessage('headset-button', type);
