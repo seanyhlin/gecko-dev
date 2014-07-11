@@ -237,6 +237,22 @@ EVENT(keyup,
       NS_KEY_UP,
       EventNameType_HTMLXUL,
       NS_KEY_EVENT)
+NON_IDL_EVENT(mozbrowserbeforekeydown,
+              NS_KEY_BEFORE_DOWN,
+              EventNameType_All,
+              NS_KEY_EVENT)
+NON_IDL_EVENT(mozbrowserkeydown,
+              NS_KEY_AFTER_DOWN,
+              EventNameType_All,
+              NS_KEY_EVENT)
+NON_IDL_EVENT(mozbrowserbeforekeyup,
+              NS_KEY_BEFORE_UP,
+              EventNameType_All,
+              NS_KEY_EVENT)
+NON_IDL_EVENT(mozbrowserkeyup,
+              NS_KEY_AFTER_UP,
+              EventNameType_All,
+              NS_KEY_EVENT)
 EVENT(loadeddata,
       NS_LOADEDDATA,
       EventNameType_HTML,
@@ -293,7 +309,6 @@ EVENT(mozpointerlockerror,
       NS_POINTERLOCKERROR,
       EventNameType_HTML,
       NS_EVENT)
-
 EVENT(pointerdown,
       NS_POINTER_DOWN,
       EventNameType_All,

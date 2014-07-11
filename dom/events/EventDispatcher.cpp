@@ -27,6 +27,14 @@
 #include "mozilla/TouchEvents.h"
 #include "mozilla/unused.h"
 
+#undef LOG
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Key", args);
+#else
+#define LOG(args...) printf(args);
+#endif
+
 namespace mozilla {
 
 using namespace dom;
@@ -693,6 +701,14 @@ EventDispatcher::CreateEvent(EventTarget* aOwner,
       return NS_NewDOMScrollAreaEvent(aDOMEvent, aOwner, aPresContext,
                                       aEvent->AsScrollAreaEvent());
     case NS_KEY_EVENT:
+      LOG("[EventDispatcher] CreateEvent, keyCode: %d", aEvent->AsKeyboardEvent()->keyCode);
+      if (aEventType.LowerCaseEqualsLiteral("mozbrowserbeforekeydown") ||
+          aEventType.LowerCaseEqualsLiteral("mozbrowserbeforekeyup") ||
+          aEventType.LowerCaseEqualsLiteral("mozbrowserkeydown") ||
+          aEventType.LowerCaseEqualsLiteral("mozbrowserkeyup")) {
+        return NS_NewDOMBrowserElementKeyboardEvent(aDOMEvent, aOwner, aPresContext,
+                                                    aEvent->AsKeyboardEvent(), aEventType);
+      }
       return NS_NewDOMKeyboardEvent(aDOMEvent, aOwner, aPresContext,
                                     aEvent->AsKeyboardEvent());
     case NS_COMPOSITION_EVENT:

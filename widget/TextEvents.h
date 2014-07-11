@@ -12,7 +12,6 @@
 #include "mozilla/BasicEvents.h"
 #include "mozilla/EventForwards.h" // for KeyNameIndex, temporarily
 #include "mozilla/TextRange.h"
-#include "mozilla/dom/BrowserElementDictionariesBinding.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsITransferable.h"
@@ -91,6 +90,7 @@ public:
     , mCodeNameIndex(CODE_NAME_INDEX_UNKNOWN)
     , mNativeKeyEvent(nullptr)
     , mUniqueId(0)
+    , mEmbeddedCancelled(false)
   {
   }
 
@@ -145,6 +145,8 @@ public:
   // over long periods.
   uint32_t mUniqueId;
 
+  bool mEmbeddedCancelled;
+
   void GetDOMKeyName(nsAString& aKeyName)
   {
     if (mKeyNameIndex == KEY_NAME_INDEX_USE_STRING) {
@@ -188,30 +190,7 @@ public:
     // is destroyed.
     mNativeKeyEvent = nullptr;
     mUniqueId = aEvent.mUniqueId;
-  }
-
-  void CopyTo(dom::BeforeKeyEventDetail& aDetail)
-  {
-    aDetail.mCharCode = charCode;
-    aDetail.mKeyCode = keyCode;
-
-    aDetail.mAltKey = IsAlt();
-    aDetail.mCtrlKey = IsControl();
-    aDetail.mShiftKey = IsShift();
-    aDetail.mMetaKey = IsMeta();
-
-    aDetail.mLocation = location;
-    aDetail.mRepeat = mIsRepeat;
-    aDetail.mIsComposing = mIsComposing;
-
-    GetDOMKeyName(aDetail.mKey);
-    GetDOMCodeName(aDetail.mCode);
-  }
-
-  void CopyTo(dom::KeyEventDetail& aDetail)
-  {
-    CopyTo((mozilla::dom::BeforeKeyEventDetail&)aDetail);
-    aDetail.mEmbeddedCancelled = mFlags.mDefaultPrevented;
+    mEmbeddedCancelled = aEvent.mEmbeddedCancelled;
   }
 };
 

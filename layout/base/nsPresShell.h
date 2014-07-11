@@ -388,11 +388,11 @@ protected:
                           nsPresShellEventCB* aEventCB,
                           bool aTouchIsNew);
 
-  bool DispatchMozBrowserKeyEvent(nsINode* aNode,
-                                  mozilla::WidgetEvent* aEvent,
-                                  nsEventStatus* aStatus = nullptr,
-                                  mozilla::EventDispatchingCallback* aEventCB = nullptr,
-                                  bool aIsBefore = false);
+  bool DispatchBrowserElementKeyboardEvent(nsINode* aNode,
+                                           mozilla::WidgetEvent* aEvent,
+                                           nsEventStatus* aStatus = nullptr,
+                                           mozilla::EventDispatchingCallback* aEventCB = nullptr,
+                                           bool aIsBefore = false);
 
   void     WillDoReflow();
 
