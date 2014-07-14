@@ -138,10 +138,10 @@ typedef struct CapturingContentInfo {
   nsIContent* mContent;
 } CapturingContentInfo;
 
-//a4e5ff3a-dc5c-4b3a-a625-d164a9e50619
+//b4b23302-a523-4946-a76f-2f22b2f0010f
 #define NS_IPRESSHELL_IID \
-{ 0xa4e5ff3a, 0xdc5c, 0x4b3a, \
-  {0xa6, 0x25, 0xd1, 0x64, 0xa9, 0xe5, 0x06, 0x19}}
+{ 0xb4b23302, 0xa523, 0x4946, \
+  {0xa7, 0x6f, 0x2f, 0x22, 0xb2, 0xf0, 0x01, 0x0f}}
 
 // debug VerifyReflow flags
 #define VERIFY_REFLOW_ON                    0x01
@@ -201,11 +201,10 @@ public:
 
   bool IsDestroying() { return mIsDestroying; }
 
-  virtual void HandleKeyEvent(nsINode* aTarget,
-                              mozilla::WidgetEvent* aEvent,
-                              nsEventStatus* aStatus = nullptr,
-                              mozilla::EventDispatchingCallback* aEventCB = nullptr,
-                              bool aIsBefore = false) = 0;
+  virtual void DispatchKeyboardEvent(nsINode* aTarget,
+                                     mozilla::WidgetKeyboardEvent* aEvent,
+                                     nsEventStatus* aStatus = nullptr,
+                                     mozilla::EventDispatchingCallback* aEventCB = nullptr) = 0;
 
   /**
    * Make a one-way transition into a "zombie" state.  In this state,

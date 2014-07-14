@@ -360,11 +360,10 @@ public:
 
   virtual void RestyleShadowRoot(mozilla::dom::ShadowRoot* aShadowRoot);
 
-  virtual void HandleKeyEvent(nsINode* aTarget,
-                              mozilla::WidgetEvent* aEvent,
-                              nsEventStatus* aStatus = nullptr,
-                              mozilla::EventDispatchingCallback* aEventCB = nullptr,
-                              bool aIsBefore = false) MOZ_OVERRIDE;
+  virtual void DispatchKeyboardEvent(nsINode* aTarget,
+                                     mozilla::WidgetKeyboardEvent* aEvent,
+                                     nsEventStatus* aStatus = nullptr,
+                                     mozilla::EventDispatchingCallback* aEventCB = nullptr) MOZ_OVERRIDE;
 
   void SetNextPaintCompressed() { mNextPaintCompressed = true; }
 
@@ -388,11 +387,10 @@ protected:
                           nsPresShellEventCB* aEventCB,
                           bool aTouchIsNew);
 
-  bool DispatchBrowserElementKeyboardEvent(nsINode* aNode,
-                                           mozilla::WidgetEvent* aEvent,
-                                           nsEventStatus* aStatus = nullptr,
-                                           mozilla::EventDispatchingCallback* aEventCB = nullptr,
-                                           bool aIsBefore = false);
+  void DispatchKeyboardEventInternal(nsINode* aNode,
+                                     mozilla::WidgetKeyboardEvent* aEvent,
+                                     nsEventStatus* aStatus = nullptr,
+                                     mozilla::EventDispatchingCallback* aEventCB = nullptr);
 
   void     WillDoReflow();
 

@@ -1308,7 +1308,7 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
   if (event.message == NS_KEY_DOWN ||
       event.message == NS_KEY_UP) {
     // Dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' for out-of-process case.
-    presShell->HandleKeyEvent(mFrameElement, &localEvent);
+    presShell->DispatchKeyboardEvent(mFrameElement, &localEvent);
   } else {
     // Set mNoCrossProcessBoundaryForwarding to avoid this event from
     // being infinitely redispatched and forwarded to the child again.

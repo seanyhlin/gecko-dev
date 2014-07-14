@@ -1206,7 +1206,7 @@ EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
       nsIContent* target = frame ? frame->GetContent() : nullptr;
       nsIPresShell* presShell = mPresContext->PresShell();
       if (target && presShell && !IsRemoteTarget(target)) {
-        presShell->HandleKeyEvent(target, aEvent, aStatus);
+        presShell->DispatchKeyboardEvent(target, aEvent->AsKeyboardEvent(), aStatus);
       }
     }
     return false;

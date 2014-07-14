@@ -701,16 +701,17 @@ EventDispatcher::CreateEvent(EventTarget* aOwner,
       return NS_NewDOMScrollAreaEvent(aDOMEvent, aOwner, aPresContext,
                                       aEvent->AsScrollAreaEvent());
     case NS_KEY_EVENT:
-      LOG("[EventDispatcher] CreateEvent, keyCode: %d", aEvent->AsKeyboardEvent()->keyCode);
-      if (aEventType.LowerCaseEqualsLiteral("mozbrowserbeforekeydown") ||
-          aEventType.LowerCaseEqualsLiteral("mozbrowserbeforekeyup") ||
-          aEventType.LowerCaseEqualsLiteral("mozbrowserkeydown") ||
-          aEventType.LowerCaseEqualsLiteral("mozbrowserkeyup")) {
-        return NS_NewDOMBrowserElementKeyboardEvent(aDOMEvent, aOwner, aPresContext,
-                                                    aEvent->AsKeyboardEvent(), aEventType);
+      switch (aEvent->message) {
+        case NS_KEY_BEFORE_DOWN:
+        case NS_KEY_BEFORE_UP:
+        case NS_KEY_AFTER_DOWN:
+        case NS_KEY_AFTER_UP: 
+          return NS_NewDOMBrowserElementKeyboardEvent(aDOMEvent, aOwner, aPresContext,
+                                                      aEvent->AsKeyboardEvent(), aEventType);
+        default:
+          return NS_NewDOMKeyboardEvent(aDOMEvent, aOwner, aPresContext,
+                                        aEvent->AsKeyboardEvent());
       }
-      return NS_NewDOMKeyboardEvent(aDOMEvent, aOwner, aPresContext,
-                                    aEvent->AsKeyboardEvent());
     case NS_COMPOSITION_EVENT:
       return NS_NewDOMCompositionEvent(aDOMEvent, aOwner, aPresContext,
                                        aEvent->AsCompositionEvent());
