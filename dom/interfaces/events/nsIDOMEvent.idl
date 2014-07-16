@@ -277,8 +277,7 @@ nsresult
 NS_NewDOMBrowserElementKeyboardEvent(nsIDOMEvent** aInstancePtrResult,
                                      mozilla::dom::EventTarget* aOwner,
                                      nsPresContext* aPresContext,
-                                     mozilla::WidgetKeyboardEvent* aEvent,
-                                     const nsAString& aEventType);
+                                     mozilla::WidgetKeyboardEvent* aEvent);
 
 nsresult
 NS_NewDOMCompositionEvent(nsIDOMEvent** aInstancePtrResult,

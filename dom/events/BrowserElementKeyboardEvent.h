@@ -20,8 +20,7 @@ class BrowserElementKeyboardEvent : public KeyboardEvent
 public:
   BrowserElementKeyboardEvent(EventTarget* aOwner,
                               nsPresContext* aPresContext,
-                              WidgetKeyboardEvent* aEvent,
-                              const nsAString& aEventType);
+                              WidgetKeyboardEvent* aEvent);
 
   virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE
   {

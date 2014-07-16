@@ -554,13 +554,9 @@ EventListenerManager::ListenerCanHandle(Listener* aListener,
       aEvent->message == NS_KEY_AFTER_DOWN ||
       aEvent->message == NS_KEY_BEFORE_UP ||
       aEvent->message == NS_KEY_AFTER_UP) {
+    // FIXME
     return aListener->mTypeString.Equals(aEvent->typeString); 
   }
-/*  if (aEvent->message == NS_KEY_DOWN ||
-      aEvent->message == NS_KEY_UP) {
-    return (aListener->mEventType == aEvent->message) ||
-           (aListener->mTypeString.Equals(aEvent->typeString));
-  }*/
   return aListener->mEventType == aEvent->message;
 }
 

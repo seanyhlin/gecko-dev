@@ -22,26 +22,42 @@ namespace dom {
 
 BrowserElementKeyboardEvent::BrowserElementKeyboardEvent(EventTarget* aOwner,
                                                          nsPresContext* aPresContext,
-                                                         WidgetKeyboardEvent* aEvent,
-                                                         const nsAString& aEventType)
+                                                         WidgetKeyboardEvent* aEvent)
   : KeyboardEvent(aOwner, aPresContext,
                   aEvent ? aEvent : new WidgetKeyboardEvent(false, 0, nullptr))
 {
-  NS_ASSERTION(mEvent->eventStructType == NS_KEY_EVENT,
-               "event type mismatch NS_KEY_EVENT");
-  NS_ASSERTION(mEvent->message == NS_KEY_BEFORE_DOWN ||
-               mEvent->message == NS_KEY_BEFORE_UP ||
-               mEvent->message == NS_KEY_AFTER_DOWN ||
-               mEvent->message == NS_KEY_AFTER_UP,
-               "event message mismatch");
+  MOZ_ASSERT(mEvent->eventStructType == NS_KEY_EVENT,
+             "event type mismatch NS_KEY_EVENT");
+  MOZ_ASSERT(mEvent->message == NS_KEY_BEFORE_DOWN ||
+             mEvent->message == NS_KEY_BEFORE_UP ||
+             mEvent->message == NS_KEY_AFTER_DOWN ||
+             mEvent->message == NS_KEY_AFTER_UP,
+             "event message mismatch");
 
   if (aEvent) {
     mEventIsInternal = false;
-    nsCOMPtr<nsIAtom> atom = do_GetAtom(NS_LITERAL_STRING("on") + aEventType);
-    mEvent->userType = atom;
-    mEvent->typeString = aEventType;
 
-    LOG("[BrowserElementKeyboardEvent] keyCode: %d", mEvent->AsKeyboardEvent()->keyCode);
+    nsAutoString typeString;
+    switch (mEvent->message) {
+      case NS_KEY_BEFORE_DOWN:
+        typeString.AssignLiteral("mozbrowserbeforekeydown");
+        break;
+      case NS_KEY_BEFORE_UP:
+        typeString.AssignLiteral("mozbrowserbeforekeyup");
+        break;
+      case NS_KEY_AFTER_DOWN:
+        typeString.AssignLiteral("mozbrowserkeydown");
+        break;
+      case NS_KEY_AFTER_UP:
+        typeString.AssignLiteral("mozbrowserkeyup");
+        break;
+      default:
+        break;
+    }
+    mEvent->typeString = typeString;
+    nsCOMPtr<nsIAtom> atom = do_GetAtom(NS_LITERAL_STRING("on") + typeString);
+    mEvent->userType = atom;
+
     if (mEvent->message == NS_KEY_AFTER_DOWN ||
         mEvent->message == NS_KEY_AFTER_UP) {
       mEmbeddedCancelled.SetValue(aEvent->AsKeyboardEvent()->mFlags.mDefaultPrevented);
@@ -61,7 +77,7 @@ BrowserElementKeyboardEvent::Constructor(EventTarget* aOwner,
                                          const BrowserElementKeyboardEventInit& aParam)
 {
   nsRefPtr<BrowserElementKeyboardEvent> newEvent =
-    new BrowserElementKeyboardEvent(aOwner, nullptr, nullptr, EmptyString());
+    new BrowserElementKeyboardEvent(aOwner, nullptr, nullptr);
   bool trusted = newEvent->Init(aOwner);
   newEvent->InitKeyEvent(aType, aParam.mBubbles, aParam.mCancelable,
                          aParam.mView, aParam.mCtrlKey, aParam.mAltKey,
@@ -145,12 +161,11 @@ nsresult
 NS_NewDOMBrowserElementKeyboardEvent(nsIDOMEvent** aInstancePtrResult,
                                      EventTarget* aOwner,
                                      nsPresContext* aPresContext,
-                                     WidgetKeyboardEvent *aEvent,
-                                     const nsAString& aEventType)
+                                     WidgetKeyboardEvent *aEvent)
 {
   LOG("[BrowserElementKeyboardEvent] NS_NewDOMBrowserElementKeyboardEvent");
   BrowserElementKeyboardEvent *it =
-    new BrowserElementKeyboardEvent(aOwner, aPresContext, aEvent, aEventType);
+    new BrowserElementKeyboardEvent(aOwner, aPresContext, aEvent);
     
   NS_ADDREF(it);
   *aInstancePtrResult = static_cast<Event*>(it);

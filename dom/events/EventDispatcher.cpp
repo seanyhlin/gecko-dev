@@ -708,7 +708,7 @@ EventDispatcher::CreateEvent(EventTarget* aOwner,
         case NS_KEY_AFTER_DOWN:
         case NS_KEY_AFTER_UP: 
           return NS_NewDOMBrowserElementKeyboardEvent(aDOMEvent, aOwner, aPresContext,
-                                                      aEvent->AsKeyboardEvent(), aEventType);
+                                                      aEvent->AsKeyboardEvent());
         default:
           return NS_NewDOMKeyboardEvent(aDOMEvent, aOwner, aPresContext,
                                         aEvent->AsKeyboardEvent());

@@ -7636,17 +7636,16 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
   }
 
   nsCOMPtr<EventTarget> et = do_QueryInterface(document->GetWindow());
-  if (NS_WARN_IF(et)) {
+  if (NS_WARN_IF(!et)) {
     return;
   }
 
   LOG("going to create event");
   nsCOMPtr<nsIDOMEvent> domEvent;
+  aEvent->mFlags.mWantReplyFromContentProcess = true;
   EventDispatcher::CreateEvent(et, mPresContext,
                                static_cast<WidgetEvent*>(aEvent), EmptyString(),
                                getter_AddRefs(domEvent));
-
-  aEvent->mFlags.mWantReplyFromContentProcess = true;
   EventDispatcher::Dispatch(et, mPresContext, aEvent, domEvent, aStatus);
 
   // When 'mozbrowserbeforekeydown' or 'mozbrowserbeforekeyup' is prevented,
@@ -7703,7 +7702,12 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
   for (int i = 0, j = length - 1; i < length; i++, j--) {
     node = isBefore ? chain[j] : chain[i];
     LOG("i:%d, j:%d, %s, %d", i, j, NS_ConvertUTF16toUTF8(node->NodeName()).get(), node->NodeName().Find("IFRAME"));
-    if (node->NodeName().Find("IFRAME") == -1) {
+    if (node->NodeName().Find("IFRAME") == -1 && isBefore) {
+      // Going to dispatch 'keydown'/'keyup'.
+      aEvent->message = eventMessage;
+      aEvent->mFlags.mWantReplyFromContentProcess = true;
+      EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
+                                aEvent, nullptr, aStatus, aEventCB);
       break;
     }
 
@@ -7713,13 +7717,6 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
                         NS_KEY_BEFORE_DOWN : NS_KEY_BEFORE_UP;
     }
     DispatchKeyboardEventInternal(node, aEvent, aStatus, aEventCB);
-  }
-
-  // Going to dispatch 'keydown'/'keyup'.
-  if (isBefore) {
-    aEvent->mFlags.mWantReplyFromContentProcess = true;
-    EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
-                              aEvent, nullptr, aStatus, aEventCB);
   }
 }
 
