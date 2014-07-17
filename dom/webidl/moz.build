@@ -49,6 +49,7 @@ WEBIDL_FILES = [
     'BiquadFilterNode.webidl',
     'Blob.webidl',
     'BrowserElementDictionaries.webidl',
+    'BrowserElementKeyboardEvent.webidl',
     'CallsList.webidl',
     'CameraCapabilities.webidl',
     'CameraControl.webidl',

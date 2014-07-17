@@ -653,6 +653,10 @@ EventStateManager::PreHandleEvent(nsPresContext* aPresContext,
     // then fall through...
   case NS_KEY_DOWN:
   case NS_KEY_UP:
+  case NS_KEY_BEFORE_DOWN:
+  case NS_KEY_AFTER_DOWN:
+  case NS_KEY_BEFORE_UP:
+  case NS_KEY_AFTER_UP:
     {
       nsIContent* content = GetFocusedContent();
       if (content)

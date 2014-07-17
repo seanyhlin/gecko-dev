@@ -702,8 +702,18 @@ EventDispatcher::CreateEvent(EventTarget* aOwner,
       return NS_NewDOMScrollAreaEvent(aDOMEvent, aOwner, aPresContext,
                                       aEvent->AsScrollAreaEvent());
     case NS_KEY_EVENT:
-      return NS_NewDOMKeyboardEvent(aDOMEvent, aOwner, aPresContext,
-                                    aEvent->AsKeyboardEvent());
+      switch (aEvent->message) {
+        case NS_KEY_BEFORE_DOWN:
+        case NS_KEY_BEFORE_UP:
+        case NS_KEY_AFTER_DOWN:
+        case NS_KEY_AFTER_UP:
+          return NS_NewDOMBrowserElementKeyboardEvent(aDOMEvent, aOwner,
+                                                      aPresContext,
+                                                      aEvent->AsKeyboardEvent());
+        default:
+          return NS_NewDOMKeyboardEvent(aDOMEvent, aOwner, aPresContext,
+                                        aEvent->AsKeyboardEvent());
+      }
     case NS_COMPOSITION_EVENT:
       return NS_NewDOMCompositionEvent(aDOMEvent, aOwner, aPresContext,
                                        aEvent->AsCompositionEvent());
