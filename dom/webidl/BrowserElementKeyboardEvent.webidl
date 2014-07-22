@@ -6,9 +6,13 @@
 
 interface WindowProxy;
 
-[Constructor(DOMString typeArg, optional BrowserElementKeyboardEventInit keyboardEventInitDict)]
 interface BrowserElementKeyboardEvent : KeyboardEvent
 {
+  // The valid value of embeddedCancelled is:
+  // - "mozbrowserbeforekeydown": null
+  // - "mozbrowserbeforekeyup": null
+  // - "mozbrowserafterkeydown": true/false
+  // - "mozbrowserafterkeyup": true/false
   readonly attribute boolean? embeddedCancelled;
 };
 

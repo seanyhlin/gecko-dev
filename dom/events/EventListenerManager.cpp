@@ -550,13 +550,6 @@ EventListenerManager::ListenerCanHandle(Listener* aListener,
   }
   MOZ_ASSERT(mIsMainThreadELM);
 
-  if (aEvent->message == NS_KEY_BEFORE_DOWN ||
-      aEvent->message == NS_KEY_AFTER_DOWN ||
-      aEvent->message == NS_KEY_BEFORE_UP ||
-      aEvent->message == NS_KEY_AFTER_UP) {
-    // FIXME
-    return aListener->mTypeString.Equals(aEvent->typeString); 
-  }
   return aListener->mEventType == aEvent->message;
 }
 
@@ -568,6 +561,7 @@ EventListenerManager::AddEventListenerByType(
 {
   nsCOMPtr<nsIAtom> atom =
     mIsMainThreadELM ? do_GetAtom(NS_LITERAL_STRING("on") + aType) : nullptr;
+
   uint32_t type = nsContentUtils::GetEventId(atom);
   AddEventListenerInternal(aListenerHolder, type, atom, aType, aFlags);
 }

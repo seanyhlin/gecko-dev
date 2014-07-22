@@ -27,23 +27,12 @@ public:
     return BrowserElementKeyboardEventBinding::Wrap(aCx, this);
   }
 
-  static already_AddRefed<BrowserElementKeyboardEvent>
-  Constructor(const GlobalObject& aGlobal,
-              const nsAString& aType,
-              const BrowserElementKeyboardEventInit& aParam,
-              ErrorResult& aRv);
-
-  static already_AddRefed<BrowserElementKeyboardEvent>
-  Constructor(EventTarget* aOwner,
-              const nsAString& aType,
-              const BrowserElementKeyboardEventInit& aParam);
-
   Nullable<bool> GetEmbeddedCancelled() const
   {
     return mEmbeddedCancelled;
   }
 
-  virtual uint32_t CharCode() MOZ_OVERRIDE;
+  // FIXME
   virtual uint32_t KeyCode() MOZ_OVERRIDE;
   virtual uint32_t Which() MOZ_OVERRIDE;
 
