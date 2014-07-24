@@ -6,8 +6,9 @@
  * Portions Copyright 2013 Microsoft Open Technologies, Inc. */
 
 #include "mozilla/dom/BrowserElementKeyboardEvent.h"
+#include "mozilla/dom/KeyboardEvent.h"
 #include "mozilla/TextEvents.h"
-#include "prtime.h"
+
 
 #undef LOG
 #if defined(MOZ_WIDGET_GONK)
@@ -47,48 +48,6 @@ BrowserElementKeyboardEvent::BrowserElementKeyboardEvent(
   }
 }
 
-uint32_t
-BrowserElementKeyboardEvent::KeyCode()
-{
-  switch (mEvent->message) {
-  case NS_KEY_BEFORE_DOWN:
-  case NS_KEY_DOWN:
-  case NS_KEY_AFTER_DOWN:
-  case NS_KEY_PRESS:
-  case NS_KEY_BEFORE_UP:
-  case NS_KEY_UP:
-  case NS_KEY_AFTER_UP:
-    return mEvent->AsKeyboardEvent()->keyCode;
-  }
-  return 0;
-}
-
-uint32_t
-BrowserElementKeyboardEvent::Which()
-{
-  switch (mEvent->message) {
-    case NS_KEY_BEFORE_DOWN:
-    case NS_KEY_DOWN:
-    case NS_KEY_AFTER_DOWN:
-    case NS_KEY_BEFORE_UP:
-    case NS_KEY_UP:
-    case NS_KEY_AFTER_UP:
-      return KeyCode();
-    case NS_KEY_PRESS:
-      //Special case for 4xp bug 62878.  Try to make value of which
-      //more closely mirror the values that 4.x gave for RETURN and BACKSPACE
-      {
-        uint32_t keyCode = mEvent->AsKeyboardEvent()->keyCode;
-        if (keyCode == NS_VK_RETURN || keyCode == NS_VK_BACK) {
-          return keyCode;
-        }
-        return CharCode();
-      }
-  }
-
-  return 0;
-}
-
 } // namespace dom
 } // namespace mozilla
 
@@ -104,7 +63,7 @@ NS_NewDOMBrowserElementKeyboardEvent(nsIDOMEvent** aInstancePtrResult,
   LOG("[BrowserElementKeyboardEvent] NS_NewDOMBrowserElementKeyboardEvent");
   BrowserElementKeyboardEvent* it =
     new BrowserElementKeyboardEvent(aOwner, aPresContext, aEvent);
-    
+
   NS_ADDREF(it);
   *aInstancePtrResult = static_cast<Event*>(it);
   return NS_OK;

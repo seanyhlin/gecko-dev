@@ -32,10 +32,6 @@ public:
     return mEmbeddedCancelled;
   }
 
-  // FIXME
-  virtual uint32_t KeyCode() MOZ_OVERRIDE;
-  virtual uint32_t Which() MOZ_OVERRIDE;
-
 private:
   Nullable<bool> mEmbeddedCancelled;
 };

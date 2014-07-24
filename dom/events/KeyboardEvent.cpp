@@ -182,6 +182,10 @@ KeyboardEvent::KeyCode()
   case NS_KEY_UP:
   case NS_KEY_PRESS:
   case NS_KEY_DOWN:
+  case NS_KEY_BEFORE_DOWN:
+  case NS_KEY_BEFORE_UP:
+  case NS_KEY_AFTER_DOWN:
+  case NS_KEY_AFTER_UP:
     return mEvent->AsKeyboardEvent()->keyCode;
   }
   return 0;
@@ -198,6 +202,10 @@ KeyboardEvent::Which()
   switch (mEvent->message) {
     case NS_KEY_UP:
     case NS_KEY_DOWN:
+    case NS_KEY_BEFORE_DOWN:
+    case NS_KEY_BEFORE_UP:
+    case NS_KEY_AFTER_DOWN:
+    case NS_KEY_AFTER_UP:
       return KeyCode();
     case NS_KEY_PRESS:
       //Special case for 4xp bug 62878.  Try to make value of which
