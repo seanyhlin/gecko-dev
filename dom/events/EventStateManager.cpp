@@ -1084,7 +1084,6 @@ bool
 EventStateManager::DispatchCrossProcessEvent(WidgetEvent* aEvent,
                                              nsFrameLoader* aFrameLoader,
                                              nsEventStatus *aStatus) {
-  LOG("[EventStateManager] %s, %d", __FUNCTION__, aEvent->eventStructType == NS_KEY_EVENT);
   PBrowserParent* remoteBrowser = aFrameLoader->GetRemoteBrowser();
   TabParent* remote = static_cast<TabParent*>(remoteBrowser);
   if (!remote) {
@@ -1096,6 +1095,13 @@ EventStateManager::DispatchCrossProcessEvent(WidgetEvent* aEvent,
     return remote->SendRealMouseEvent(*aEvent->AsMouseEvent());
   }
   case NS_KEY_EVENT: {
+    if (aEvent->message == NS_KEY_BEFORE_DOWN ||
+        aEvent->message == NS_KEY_AFTER_DOWN) {
+      aEvent->message = NS_KEY_DOWN;
+    } else if (aEvent->message == NS_KEY_BEFORE_UP ||
+               aEvent->message == NS_KEY_AFTER_UP) {
+      aEvent->message = NS_KEY_UP;
+    }
     return remote->SendRealKeyEvent(*aEvent->AsKeyboardEvent());
   }
   case NS_WHEEL_EVENT: {
@@ -1191,7 +1197,6 @@ CrossProcessSafeEvent(const WidgetEvent& aEvent)
 bool
 EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
                                            nsEventStatus *aStatus) {
-  LOG("[EventStateManager] %s", __FUNCTION__);
   if (*aStatus == nsEventStatus_eConsumeNoDefault ||
       aEvent->mFlags.mNoCrossProcessBoundaryForwarding ||
       !CrossProcessSafeEvent(*aEvent)) {

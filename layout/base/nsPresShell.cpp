@@ -7629,9 +7629,7 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
   }
 
   nsCOMPtr<nsIDocShell> docShell = presContext->GetDocShell();
-  LOG("<4> DispatchKeyboardEventInternal, %d", docShell->GetIsBrowserOrApp());
   if (NS_WARN_IF(!docShell) || !docShell->GetIsBrowserOrApp()) {
-    LOG("return");
     return;
   }
 
@@ -7640,7 +7638,6 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
     return;
   }
 
-  LOG("going to create event");
   nsCOMPtr<nsIDOMEvent> domEvent;
   aEvent->mFlags.mWantReplyFromContentProcess = true;
   EventDispatcher::CreateEvent(et, mPresContext,
@@ -7653,6 +7650,7 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
   if (aEvent->mFlags.mDefaultPrevented &&
       (aEvent->message == NS_KEY_BEFORE_DOWN ||
        aEvent->message == NS_KEY_BEFORE_UP)) {
+    LOG("preventDefault, aEvent->message: %d", aEvent->message);
     WidgetKeyboardEvent newEvent(aEvent->mFlags.mIsTrusted,
                                  aEvent->message, aEvent->widget);
     newEvent.AssignKeyEventData(*aEvent, false);
@@ -7697,11 +7695,10 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
   size_t length = chain.Length();
   bool isBefore = (aEvent->message == NS_KEY_DOWN ||
                    aEvent->message == NS_KEY_UP);
-  LOG("isBefore:%d", isBefore);
   uint32_t eventMessage = aEvent->message;
   for (int i = 0, j = length - 1; i < length; i++, j--) {
     node = isBefore ? chain[j] : chain[i];
-    LOG("i:%d, j:%d, %s, %d", i, j, NS_ConvertUTF16toUTF8(node->NodeName()).get(), node->NodeName().Find("IFRAME"));
+    LOG("NodeName(): %s", NS_ConvertUTF16toUTF8(node->NodeName()).get());
     if (node->NodeName().Find("IFRAME") == -1 && isBefore) {
       // Going to dispatch 'keydown'/'keyup'.
       aEvent->message = eventMessage;
