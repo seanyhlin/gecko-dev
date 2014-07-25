@@ -1095,11 +1095,10 @@ EventStateManager::DispatchCrossProcessEvent(WidgetEvent* aEvent,
     return remote->SendRealMouseEvent(*aEvent->AsMouseEvent());
   }
   case NS_KEY_EVENT: {
-    if (aEvent->message == NS_KEY_BEFORE_DOWN ||
-        aEvent->message == NS_KEY_AFTER_DOWN) {
+    WidgetKeyboardEvent* keyboardEvent = aEvent->AsKeyboardEvent();
+    if (keyboardEvent->IsKeyDownEvent()) {
       aEvent->message = NS_KEY_DOWN;
-    } else if (aEvent->message == NS_KEY_BEFORE_UP ||
-               aEvent->message == NS_KEY_AFTER_UP) {
+    } else if (keyboardEvent->IsKeyUpEvent()) {
       aEvent->message = NS_KEY_UP;
     }
     return remote->SendRealKeyEvent(*aEvent->AsKeyboardEvent());
@@ -1200,13 +1199,10 @@ EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
   if (*aStatus == nsEventStatus_eConsumeNoDefault ||
       aEvent->mFlags.mNoCrossProcessBoundaryForwarding ||
       !CrossProcessSafeEvent(*aEvent)) {
-    // Dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' for in-process case.
-    if (aEvent->message == NS_KEY_DOWN ||
-        aEvent->message == NS_KEY_UP ||
-        aEvent->message == NS_KEY_BEFORE_DOWN ||
-        aEvent->message == NS_KEY_BEFORE_UP ||
-        aEvent->message == NS_KEY_AFTER_DOWN ||
-        aEvent->message == NS_KEY_AFTER_UP) {
+    // Dispatch 'mozbrowserafterkeydown'/'mozbrowserafterkeyup' for in-process case.
+    WidgetKeyboardEvent* keyboardEvent = aEvent->AsKeyboardEvent();
+    if (keyboardEvent &&
+        (keyboardEvent->IsKeyDownEvent() || keyboardEvent->IsKeyUpEvent())) {
       nsIFrame* frame = GetEventTarget();
       nsIContent* target = frame ? frame->GetContent() : nullptr;
       nsIPresShell* presShell = mPresContext->PresShell();

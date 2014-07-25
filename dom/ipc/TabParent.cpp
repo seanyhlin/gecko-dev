@@ -1289,8 +1289,6 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& aEvent)
   }
   NS_ENSURE_TRUE(mFrameElement, true);
 
-  WidgetKeyboardEvent localEvent(aEvent);
-
   // Here we convert the WidgetEvent that we received to an nsIDOMEvent
   // to be able to dispatch it to the <browser> element as the target element.
   nsIDocument* doc = mFrameElement->OwnerDoc();
@@ -1299,6 +1297,7 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& aEvent)
   nsPresContext* presContext = presShell->GetPresContext();
   NS_ENSURE_TRUE(presContext, true);
 
+  WidgetKeyboardEvent localEvent(aEvent);
   if (aEvent.message == NS_KEY_DOWN ||
       aEvent.message == NS_KEY_UP) {
     // Dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' for out-of-process case.

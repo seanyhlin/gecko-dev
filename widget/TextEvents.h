@@ -144,7 +144,8 @@ public:
   // after preventDefault is called on keydown events. It's ok if this wraps
   // over long periods.
   uint32_t mUniqueId;
-
+  // Extra member for BrowserElementKeyboardEvent. Indicates whether
+  // keydown/keyup events are default-prevented.
   bool mEmbeddedCancelled;
 
   void GetDOMKeyName(nsAString& aKeyName)
@@ -191,6 +192,18 @@ public:
     mNativeKeyEvent = nullptr;
     mUniqueId = aEvent.mUniqueId;
     mEmbeddedCancelled = aEvent.mEmbeddedCancelled;
+  }
+
+  bool IsKeyDownEvent() {
+    return (message == NS_KEY_DOWN ||
+            message == NS_KEY_BEFORE_DOWN ||
+            message == NS_KEY_AFTER_DOWN);
+  }
+
+  bool IsKeyUpEvent() {
+     return (message == NS_KEY_UP ||
+             message == NS_KEY_BEFORE_UP ||
+             message == NS_KEY_AFTER_UP);
   }
 };
 
