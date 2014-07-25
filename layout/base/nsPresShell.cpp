@@ -7789,6 +7789,12 @@ PresShell::HandleEventInternal(WidgetEvent* aEvent, nsEventStatus* aStatus)
                 aEvent->eventStructType == NS_TEXT_EVENT) {
               IMEStateManager::DispatchCompositionEvent(eventTarget,
                 mPresContext, aEvent, aStatus, eventCBPtr);
+            } else if (aEvent->message == NS_KEY_DOWN ||
+                       aEvent->message == NS_KEY_UP) {
+              // Dispatch 'mozbrowserbeforekeydown'/'mozbrowserbeforekeyup'
+              // and 'keydown'/'keyup'.
+              DispatchKeyboardEvent(eventTarget, aEvent->AsKeyboardEvent(),
+                                    aStatus, eventCBPtr);
             } else {
               EventDispatcher::Dispatch(eventTarget, mPresContext,
                                         aEvent, nullptr, aStatus, eventCBPtr);
@@ -7834,6 +7840,119 @@ nsIPresShell::DispatchGotOrLostPointerCaptureEvent(bool aIsGotCapture,
   if (event) {
     bool dummy;
     aCaptureTarget->DispatchEvent(event->InternalDOMEvent(), &dummy);
+  }
+}
+
+void
+PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
+                                         WidgetKeyboardEvent* aEvent,
+                                         nsEventStatus* aStatus,
+                                         mozilla::EventDispatchingCallback* aEventCB)
+{
+  MOZ_ASSERT(aNode && aEvent);
+  MOZ_ASSERT(aEvent->message == NS_KEY_BEFORE_DOWN ||
+             aEvent->message == NS_KEY_BEFORE_UP ||
+             aEvent->message == NS_KEY_AFTER_DOWN ||
+             aEvent->message == NS_KEY_AFTER_UP);
+
+  nsCOMPtr<nsIDocument> document = aNode->OwnerDoc();
+  if (NS_WARN_IF(!document)) {
+    return;
+  }
+
+  nsCOMPtr<nsIPresShell> presShell = document->GetShell();
+  if (NS_WARN_IF(!presShell)) {
+    return;
+  }
+
+  nsRefPtr<nsPresContext> presContext = presShell->GetPresContext();
+  if (NS_WARN_IF(!presContext)) {
+    return;
+  }
+
+  nsCOMPtr<nsIDocShell> docShell = presContext->GetDocShell();
+  if (NS_WARN_IF(!docShell) || !docShell->GetIsBrowserOrApp()) {
+    return;
+  }
+
+  nsCOMPtr<EventTarget> et = do_QueryInterface(document->GetWindow());
+  if (NS_WARN_IF(!et)) {
+    return;
+  }
+
+  nsCOMPtr<nsIDOMEvent> domEvent;
+  aEvent->mFlags.mWantReplyFromContentProcess = true;
+  EventDispatcher::CreateEvent(et, mPresContext,
+                               static_cast<WidgetEvent*>(aEvent), EmptyString(),
+                               getter_AddRefs(domEvent));
+  EventDispatcher::Dispatch(et, mPresContext, aEvent, domEvent, aStatus);
+
+  // When 'mozbrowserbeforekeydown' or 'mozbrowserbeforekeyup' is prevented,
+  // dispatch 'mozbrowserkeydown'/'mozbrowserkeyup' event immediately.
+  if (aEvent->mFlags.mDefaultPrevented &&
+      (aEvent->message == NS_KEY_BEFORE_DOWN ||
+       aEvent->message == NS_KEY_BEFORE_UP)) {
+    WidgetKeyboardEvent newEvent(aEvent->mFlags.mIsTrusted,
+                                 aEvent->message, aEvent->widget);
+    newEvent.AssignKeyEventData(*aEvent, false);
+    newEvent.mFlags.mDefaultPrevented = false;
+    newEvent.message = (aEvent->message == NS_KEY_BEFORE_DOWN) ?
+                       NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
+    DispatchKeyboardEvent(aNode, &newEvent, aStatus, aEventCB);
+  }
+}
+
+void
+PresShell::DispatchKeyboardEvent(nsINode* aTarget,
+                                 WidgetKeyboardEvent* aEvent,
+                                 nsEventStatus* aStatus,
+                                 EventDispatchingCallback* aEventCB)
+{
+  MOZ_ASSERT(aTarget && aEvent);
+  MOZ_ASSERT(aEvent->message == NS_KEY_DOWN ||
+             aEvent->message == NS_KEY_UP ||
+             aEvent->message == NS_KEY_AFTER_DOWN ||
+             aEvent->message == NS_KEY_AFTER_UP);
+
+  // Build up the mozbrowser chain.
+  nsCOMPtr<nsINode> node = aTarget;
+  nsTArray<nsCOMPtr<nsINode> > chain;
+  while (node) {
+    chain.AppendElement(node);
+    nsPIDOMWindow* win = node->OwnerDoc()->GetWindow();
+    node = win ? win->GetFrameElementInternal() : nullptr;
+  }
+
+  /**
+   * When event message is either NS_KEY_DOWN or NS_KEY_UP, dispatch
+   * 'mozbrowserbeforekeydown'/'mozbrowserbeforekeyup' from the outermost
+   * browser element and then dispatch 'keydown'/'keyup' to target.
+   *
+   * When event message is either NS_KEY_AFTER_DOWN or NS_KEY_AFTER_UP, dispatch
+   * 'mozbrowserkeydown' and 'mozbrowserkeyup' from the innermost browser
+   * element.
+   */
+  size_t length = chain.Length();
+  bool isBefore = (aEvent->message == NS_KEY_DOWN ||
+                   aEvent->message == NS_KEY_UP);
+  uint32_t eventMessage = aEvent->message;
+  for (int i = 0, j = length - 1; i < length; i++, j--) {
+    node = isBefore ? chain[j] : chain[i];
+    if (node->NodeName().Find("IFRAME") == -1 && isBefore) {
+      // Going to dispatch 'keydown'/'keyup'.
+      aEvent->message = eventMessage;
+      aEvent->mFlags.mWantReplyFromContentProcess = true;
+      EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
+                                aEvent, nullptr, aStatus, aEventCB);
+      break;
+    }
+
+    // Override message if needed and then dispatch the corresponding event.
+    if (isBefore) {
+      aEvent->message = (eventMessage == NS_KEY_DOWN) ?
+                        NS_KEY_BEFORE_DOWN : NS_KEY_BEFORE_UP;
+    }
+    DispatchKeyboardEventInternal(node, aEvent, aStatus, aEventCB);
   }
 }
 

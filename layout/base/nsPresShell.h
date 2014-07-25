@@ -372,6 +372,11 @@ public:
 
   virtual void RecordShadowStyleChange(mozilla::dom::ShadowRoot* aShadowRoot);
 
+  virtual void DispatchKeyboardEvent(nsINode* aTarget,
+                                     mozilla::WidgetKeyboardEvent* aEvent,
+                                     nsEventStatus* aStatus = nullptr,
+                                     mozilla::EventDispatchingCallback* aEventCB = nullptr) MOZ_OVERRIDE;
+
   void SetNextPaintCompressed() { mNextPaintCompressed = true; }
 
 protected:
@@ -393,6 +398,11 @@ protected:
                           nsEventStatus* aStatus,
                           nsPresShellEventCB* aEventCB,
                           bool aTouchIsNew);
+
+  void DispatchKeyboardEventInternal(nsINode* aNode,
+                                     mozilla::WidgetKeyboardEvent* aEvent,
+                                     nsEventStatus* aStatus = nullptr,
+                                     mozilla::EventDispatchingCallback* aEventCB = nullptr);
 
   void     WillDoReflow();
 

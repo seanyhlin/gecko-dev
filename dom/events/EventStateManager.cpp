@@ -1098,6 +1098,12 @@ EventStateManager::DispatchCrossProcessEvent(WidgetEvent* aEvent,
     return remote->SendRealMouseEvent(*aEvent->AsMouseEvent());
   }
   case NS_KEY_EVENT: {
+    WidgetKeyboardEvent* keyboardEvent = aEvent->AsKeyboardEvent();
+    if (keyboardEvent->IsKeyDownEvent()) {
+      aEvent->message = NS_KEY_DOWN;
+    } else if (keyboardEvent->IsKeyUpEvent()) {
+      aEvent->message = NS_KEY_UP;
+    }
     return remote->SendRealKeyEvent(*aEvent->AsKeyboardEvent());
   }
   case NS_WHEEL_EVENT: {
@@ -1196,6 +1202,17 @@ EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
   if (*aStatus == nsEventStatus_eConsumeNoDefault ||
       aEvent->mFlags.mNoCrossProcessBoundaryForwarding ||
       !CrossProcessSafeEvent(*aEvent)) {
+    // Dispatch 'mozbrowserafterkeydown'/'mozbrowserafterkeyup' for in-process case.
+    WidgetKeyboardEvent* keyboardEvent = aEvent->AsKeyboardEvent();
+    if (keyboardEvent &&
+        (keyboardEvent->IsKeyDownEvent() || keyboardEvent->IsKeyUpEvent())) {
+      nsIFrame* frame = GetEventTarget();
+      nsIContent* target = frame ? frame->GetContent() : nullptr;
+      nsIPresShell* presShell = mPresContext->PresShell();
+      if (target && presShell && !IsRemoteTarget(target)) {
+        presShell->DispatchKeyboardEvent(target, aEvent->AsKeyboardEvent(), aStatus);
+      }
+    }
     return false;
   }
 
