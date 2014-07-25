@@ -1200,12 +1200,12 @@ EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
       aEvent->mFlags.mNoCrossProcessBoundaryForwarding ||
       !CrossProcessSafeEvent(*aEvent)) {
     // Dispatch 'mozbrowserafterkeydown'/'mozbrowserafterkeyup' for in-process case.
-    WidgetKeyboardEvent* keyboardEvent = aEvent->AsKeyboardEvent();
-    if (keyboardEvent &&
-        (keyboardEvent->IsKeyDownEvent() || keyboardEvent->IsKeyUpEvent())) {
+    if (aEvent->message == NS_KEY_BEFORE_DOWN ||
+        aEvent->message == NS_KEY_BEFORE_UP) {
       nsIFrame* frame = GetEventTarget();
       nsIContent* target = frame ? frame->GetContent() : nullptr;
       nsIPresShell* presShell = mPresContext->PresShell();
+      LOG("4");
       if (target && presShell && !IsRemoteTarget(target)) {
         presShell->DispatchKeyboardEvent(target, aEvent->AsKeyboardEvent(), aStatus);
       }
