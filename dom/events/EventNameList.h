@@ -239,19 +239,19 @@ EVENT(keyup,
       NS_KEY_EVENT)
 NON_IDL_EVENT(mozbrowserbeforekeydown,
               NS_KEY_BEFORE_DOWN,
-              EventNameType_HTMLBodyOrFramesetOnly,
+              EventNameType_None,
               NS_KEY_EVENT)
 NON_IDL_EVENT(mozbrowserafterkeydown,
               NS_KEY_AFTER_DOWN,
-              EventNameType_HTMLBodyOrFramesetOnly,
+              EventNameType_None,
               NS_KEY_EVENT)
 NON_IDL_EVENT(mozbrowserbeforekeyup,
               NS_KEY_BEFORE_UP,
-              EventNameType_HTMLBodyOrFramesetOnly,
+              EventNameType_None,
               NS_KEY_EVENT)
 NON_IDL_EVENT(mozbrowserafterkeyup,
               NS_KEY_AFTER_UP,
-              EventNameType_HTMLBodyOrFramesetOnly,
+              EventNameType_None,
               NS_KEY_EVENT)
 EVENT(loadeddata,
       NS_LOADEDDATA,
