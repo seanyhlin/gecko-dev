@@ -415,7 +415,7 @@ var shell = {
         break;
     }
 
-    dump("[shell] evt.type: " + evt.type + ", keyCode: " + keyCode + ', type: ' + type);
+    dump("[shell] evt.type: " + evt.type + ", key: " + evt.key + ", keyCode: " + evt.keyCode + ', type: ' + type);
     let mediaKeys = {
       'MediaNextTrack': 'media-next-track-button',
       'MediaPreviousTrack': 'media-previous-track-button',

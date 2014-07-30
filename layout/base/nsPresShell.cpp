@@ -7629,6 +7629,7 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
   }
 
   nsCOMPtr<nsIDocShell> docShell = presContext->GetDocShell();
+  LOG("[%s] message: %d, GetIsBrowserOrApp(): %d" , __FUNCTION__, aEvent->message, docShell->GetIsBrowserOrApp());
   if (NS_WARN_IF(!docShell) || !docShell->GetIsBrowserOrApp()) {
     return;
   }
@@ -7667,7 +7668,7 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
                                  nsEventStatus* aStatus,
                                  EventDispatchingCallback* aEventCB)
 {
-  LOG("[PresShell] %s, message:%d", __FUNCTION__, aEvent->message);
+  LOG("[PresShell] %s, message:%d, aTarget: %s", __FUNCTION__, aEvent->message, NS_ConvertUTF16toUTF8(aTarget->NodeName()).get());
   MOZ_ASSERT(aTarget && aEvent);
   MOZ_ASSERT(aEvent->message == NS_KEY_DOWN ||
              aEvent->message == NS_KEY_UP ||
@@ -7698,7 +7699,7 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
   uint32_t eventMessage = aEvent->message;
   for (int i = 0, j = length - 1; i < length; i++, j--) {
     node = isBefore ? chain[j] : chain[i];
-    LOG("NodeName(): %s", NS_ConvertUTF16toUTF8(node->NodeName()).get());
+    LOG("NodeName(): %s, isBefore: %d", NS_ConvertUTF16toUTF8(node->NodeName()).get(), isBefore);
     if (node->NodeName().Find("IFRAME") == -1 && isBefore) {
       // Going to dispatch 'keydown'/'keyup'.
       aEvent->message = eventMessage;

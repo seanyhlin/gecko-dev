@@ -1199,17 +1199,6 @@ EventStateManager::HandleCrossProcessEvent(WidgetEvent* aEvent,
   if (*aStatus == nsEventStatus_eConsumeNoDefault ||
       aEvent->mFlags.mNoCrossProcessBoundaryForwarding ||
       !CrossProcessSafeEvent(*aEvent)) {
-    // Dispatch 'mozbrowserafterkeydown'/'mozbrowserafterkeyup' for in-process case.
-    if (aEvent->message == NS_KEY_BEFORE_DOWN ||
-        aEvent->message == NS_KEY_BEFORE_UP) {
-      nsIFrame* frame = GetEventTarget();
-      nsIContent* target = frame ? frame->GetContent() : nullptr;
-      nsIPresShell* presShell = mPresContext->PresShell();
-      LOG("4");
-      if (target && presShell && !IsRemoteTarget(target)) {
-        presShell->DispatchKeyboardEvent(target, aEvent->AsKeyboardEvent(), aStatus);
-      }
-    }
     return false;
   }
 
@@ -2694,8 +2683,26 @@ EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
   NS_ENSURE_ARG(aPresContext);
   NS_ENSURE_ARG_POINTER(aStatus);
 
+  if (aEvent->eventStructType == NS_KEY_EVENT) {
+    LOG("[%s] message: %d", __FUNCTION__, aEvent->message);
+  }
   bool dispatchedToContentProcess = HandleCrossProcessEvent(aEvent,
                                                             aStatus);
+  if (!dispatchedToContentProcess) {
+    // Dispatch 'mozbrowserafterkeydown'/'mozbrowserafterkeyup' for in-process case.
+    if (aEvent->message == NS_KEY_DOWN ||
+        aEvent->message == NS_KEY_UP ||
+        aEvent->message == NS_KEY_BEFORE_DOWN ||
+        aEvent->message == NS_KEY_BEFORE_UP) {
+      nsIFrame* frame = GetEventTarget();
+      nsIContent* target = frame ? frame->GetContent() : nullptr;
+      nsIPresShell* presShell = mPresContext->PresShell();
+      if (target && presShell && !IsRemoteTarget(target)) {
+        aEvent->message = (aEvent->AsKeyboardEvent()->IsKeyDownEvent()) ? NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
+        presShell->DispatchKeyboardEvent(target, aEvent->AsKeyboardEvent(), aStatus);
+      }
+    }
+  }
 
   mCurrentTarget = aTargetFrame;
   mCurrentTargetContent = nullptr;
