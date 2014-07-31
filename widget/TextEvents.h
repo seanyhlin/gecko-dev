@@ -71,6 +71,7 @@ private:
   friend class dom::PBrowserParent;
   friend class dom::PBrowserChild;
 
+protected:
   WidgetKeyboardEvent()
   {
   }
@@ -78,8 +79,9 @@ private:
 public:
   virtual WidgetKeyboardEvent* AsKeyboardEvent() MOZ_OVERRIDE { return this; }
 
-  WidgetKeyboardEvent(bool aIsTrusted, uint32_t aMessage, nsIWidget* aWidget)
-    : WidgetInputEvent(aIsTrusted, aMessage, aWidget, NS_KEY_EVENT)
+  WidgetKeyboardEvent(bool aIsTrusted, uint32_t aMessage, nsIWidget* aWidget,
+                      nsEventStructType aEventStructType = NS_KEY_EVENT)
+    : WidgetInputEvent(aIsTrusted, aMessage, aWidget, aEventStructType)
     , keyCode(0)
     , charCode(0)
     , location(nsIDOMKeyEvent::DOM_KEY_LOCATION_STANDARD)
@@ -90,7 +92,6 @@ public:
     , mCodeNameIndex(CODE_NAME_INDEX_UNKNOWN)
     , mNativeKeyEvent(nullptr)
     , mUniqueId(0)
-    , mEmbeddedCancelled(false)
   {
   }
 
@@ -144,9 +145,6 @@ public:
   // after preventDefault is called on keydown events. It's ok if this wraps
   // over long periods.
   uint32_t mUniqueId;
-  // Extra member for BrowserElementKeyboardEvent. Indicates whether
-  // keydown/keyup events are default-prevented.
-  bool mEmbeddedCancelled;
 
   void GetDOMKeyName(nsAString& aKeyName)
   {
@@ -191,8 +189,60 @@ public:
     // is destroyed.
     mNativeKeyEvent = nullptr;
     mUniqueId = aEvent.mUniqueId;
+  }
+};
+
+
+/******************************************************************************
+ * mozilla::WidgetTextEvent
+ *
+ *
+ ******************************************************************************/
+class WidgetBeforeAfterKeyboardEvent : public WidgetKeyboardEvent
+{
+private:
+  friend class dom::PBrowserParent;
+  friend class dom::PBrowserChild;
+
+  WidgetBeforeAfterKeyboardEvent() {
+  }
+
+public:
+  // Extra member for BrowserElementKeyboardEvent. Indicates whether
+  // keydown/keyup events are default-prevented.
+  bool mEmbeddedCancelled;
+
+  virtual WidgetBeforeAfterKeyboardEvent* AsBeforeAfterKeyboardEvent() MOZ_OVERRIDE {
+    return this;
+  }
+
+  WidgetBeforeAfterKeyboardEvent(bool aIsTrusted, uint32_t aMessage, nsIWidget* aWidget)
+    : WidgetKeyboardEvent(aIsTrusted, aMessage, aWidget, NS_BEFORE_AFTER_KEY_EVENT)
+    , mEmbeddedCancelled(false)
+  {
+  }
+
+  virtual WidgetEvent* Duplicate() const MOZ_OVERRIDE
+  {
+    MOZ_ASSERT(eventStructType == NS_BEFORE_AFTER_KEY_EVENT,
+               "Duplicate() must be overridden by sub class");
+    // Not copying widget, it is a weak reference.
+    WidgetBeforeAfterKeyboardEvent* result =
+      new WidgetBeforeAfterKeyboardEvent(false, message, nullptr);
+    result->AssignBeforeAfterKeyEventData(*this, true);
+    result->mFlags = mFlags;
+    return result;
+  }
+
+  void AssignBeforeAfterKeyEventData(
+                                   const WidgetBeforeAfterKeyboardEvent& aEvent,
+                                   bool aCopyTargets)
+  {
+    AssignKeyEventData(aEvent, aCopyTargets);
+
     mEmbeddedCancelled = aEvent.mEmbeddedCancelled;
   }
+
 
   bool IsKeyDownEvent() {
     return (message == NS_KEY_DOWN ||
@@ -204,6 +254,14 @@ public:
      return (message == NS_KEY_UP ||
              message == NS_KEY_BEFORE_UP ||
              message == NS_KEY_AFTER_UP);
+  }
+
+  bool IsBeforeKeyEvent() {
+    return (message == NS_KEY_BEFORE_DOWN || message == NS_KEY_BEFORE_UP);
+  }
+
+  bool IsAfterKeyEvent() {
+    return (message == NS_KEY_AFTER_DOWN || message == NS_KEY_AFTER_UP);
   }
 };
 

@@ -7601,10 +7601,11 @@ nsIPresShell::DispatchGotOrLostPointerCaptureEvent(bool aIsGotCapture,
 }
 
 void
-PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
-                                         WidgetKeyboardEvent* aEvent,
-                                         nsEventStatus* aStatus,
-                                         mozilla::EventDispatchingCallback* aEventCB)
+PresShell::DispatchBeforeAfterKeyboardEventInternal(
+                                    nsINode* aNode,
+                                    WidgetBeforeAfterKeyboardEvent* aEvent,
+                                    nsEventStatus* aStatus,
+                                    mozilla::EventDispatchingCallback* aEventCB)
 {
   LOG("[PresShell] %s, message:%d", __FUNCTION__, aEvent->message);
   MOZ_ASSERT(aNode && aEvent);
@@ -7641,6 +7642,7 @@ PresShell::DispatchKeyboardEventInternal(nsINode* aNode,
 
   nsCOMPtr<nsIDOMEvent> domEvent;
   aEvent->mFlags.mWantReplyFromContentProcess = true;
+  aEvent->eventStructType = NS_BEFORE_AFTER_KEY_EVENT;
   EventDispatcher::CreateEvent(et, mPresContext,
                                static_cast<WidgetEvent*>(aEvent), EmptyString(),
                                getter_AddRefs(domEvent));
@@ -7700,21 +7702,27 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
   for (int i = 0, j = length - 1; i < length; i++, j--) {
     node = isBefore ? chain[j] : chain[i];
     LOG("NodeName(): %s, isBefore: %d", NS_ConvertUTF16toUTF8(node->NodeName()).get(), isBefore);
-    if (node->NodeName().Find("IFRAME") == -1 && isBefore) {
-      // Going to dispatch 'keydown'/'keyup'.
-      aEvent->message = eventMessage;
-      aEvent->mFlags.mWantReplyFromContentProcess = true;
-      EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
-                                aEvent, nullptr, aStatus, aEventCB);
-      break;
+    if (node->NodeName().Find("IFRAME") == -1) {
+      if (isBefore) {
+        // Going to dispatch 'keydown'/'keyup'.
+        aEvent->message = eventMessage;
+        aEvent->mFlags.mWantReplyFromContentProcess = true;
+        EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
+                                  aEvent, nullptr, aStatus, aEventCB);
+        break;
+      } else {
+        continue;
+      }
     }
 
     // Override message if needed and then dispatch the corresponding event.
+    uint32_t message = aEvent->message;
     if (isBefore) {
-      aEvent->message = (eventMessage == NS_KEY_DOWN) ?
-                        NS_KEY_BEFORE_DOWN : NS_KEY_BEFORE_UP;
+      message = (eventMessage == NS_KEY_DOWN) ? NS_KEY_BEFORE_DOWN : NS_KEY_BEFORE_UP;
     }
-    DispatchKeyboardEventInternal(node, aEvent, aStatus, aEventCB);
+    WidgetBeforeAfterKeyboardEvent newEvent(true, message, aEvent->widget);
+    newEvent.AssignKeyEventData(*aEvent, false);
+    DispatchBeforeAfterKeyboardEventInternal(node, &newEvent, aStatus, aEventCB);
   }
 }
 

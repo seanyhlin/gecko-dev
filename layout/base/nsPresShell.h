@@ -387,10 +387,11 @@ protected:
                           nsPresShellEventCB* aEventCB,
                           bool aTouchIsNew);
 
-  void DispatchKeyboardEventInternal(nsINode* aNode,
-                                     mozilla::WidgetKeyboardEvent* aEvent,
-                                     nsEventStatus* aStatus = nullptr,
-                                     mozilla::EventDispatchingCallback* aEventCB = nullptr);
+  void DispatchBeforeAfterKeyboardEventInternal(
+                         nsINode* aNode,                       
+                         mozilla::WidgetBeforeAfterKeyboardEvent* aEvent,
+                         nsEventStatus* aStatus = nullptr,                       
+                         mozilla::EventDispatchingCallback* aEventCB = nullptr);
 
   void     WillDoReflow();
 

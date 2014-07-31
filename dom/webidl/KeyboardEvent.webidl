@@ -9,9 +9,6 @@ interface WindowProxy;
 [Constructor(DOMString typeArg, optional KeyboardEventInit keyboardEventInitDict)]
 interface KeyboardEvent : UIEvent
 {
-  // Please update BeforeKeyEventDetail in BrowserElementDictionaries.webidl
-  // when the following attributes are modified.
-
   readonly attribute unsigned long    charCode;
   readonly attribute unsigned long    keyCode;
 

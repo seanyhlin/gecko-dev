@@ -4,27 +4,27 @@
  *
  * Portions Copyright 2013 Microsoft Open Technologies, Inc. */
 
-#ifndef mozilla_dom_BrowserElementKeyboardEvent_h_
-#define mozilla_dom_BrowserElementKeyboardEvent_h_
+#ifndef mozilla_dom_BeforeAfterKeyboardEvent_h_
+#define mozilla_dom_BeforeAfterKeyboardEvent_h_
 
 #include "mozilla/dom/KeyboardEvent.h"
-#include "mozilla/dom/BrowserElementKeyboardEventBinding.h"
+#include "mozilla/dom/BeforeAfterKeyboardEventBinding.h"
 
 class nsPresContext;
 
 namespace mozilla {
 namespace dom {
 
-class BrowserElementKeyboardEvent : public KeyboardEvent
+class BeforeAfterKeyboardEvent : public KeyboardEvent
 {
 public:
-  BrowserElementKeyboardEvent(EventTarget* aOwner,
-                              nsPresContext* aPresContext,
-                              WidgetKeyboardEvent* aEvent);
+  BeforeAfterKeyboardEvent(EventTarget* aOwner,
+                           nsPresContext* aPresContext,
+                           WidgetKeyboardEvent* aEvent);
 
   virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE
   {
-    return BrowserElementKeyboardEventBinding::Wrap(aCx, this);
+    return BeforeAfterKeyboardEventBinding::Wrap(aCx, this);
   }
 
   Nullable<bool> GetEmbeddedCancelled() const
@@ -39,4 +39,4 @@ private:
 } // namespace dom
 } // namespace mozilla
 
-#endif // mozilla_dom_BrowserElementKeyboardEvent_h_
+#endif // mozilla_dom_BeforeAfterKeyboardEvent_h_

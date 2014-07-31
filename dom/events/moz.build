@@ -32,8 +32,8 @@ EXPORTS.mozilla += [
 
 EXPORTS.mozilla.dom += [
     'AnimationEvent.h',
+    'BeforeAfterKeyboardEvent.h',
     'BeforeUnloadEvent.h',
-    'BrowserElementKeyboardEvent.h',
     'ClipboardEvent.h',
     'CommandEvent.h',
     'CompositionEvent.h',
@@ -70,8 +70,8 @@ if CONFIG['MOZ_WEBSPEECH']:
 UNIFIED_SOURCES += [
     'AnimationEvent.cpp',
     'AsyncEventDispatcher.cpp',
+    'BeforeAfterKeyboardEvent.cpp',
     'BeforeUnloadEvent.cpp',
-    'BrowserElementKeyboardEvent.cpp',
     'ClipboardEvent.cpp',
     'CommandEvent.cpp',
     'CompositionEvent.cpp',

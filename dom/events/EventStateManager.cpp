@@ -1094,13 +1094,16 @@ EventStateManager::DispatchCrossProcessEvent(WidgetEvent* aEvent,
   case NS_MOUSE_EVENT: {
     return remote->SendRealMouseEvent(*aEvent->AsMouseEvent());
   }
-  case NS_KEY_EVENT: {
-    WidgetKeyboardEvent* keyboardEvent = aEvent->AsKeyboardEvent();
-    if (keyboardEvent->IsKeyDownEvent()) {
+  case NS_BEFORE_AFTER_KEY_EVENT: {
+    WidgetBeforeAfterKeyboardEvent* event = aEvent->AsBeforeAfterKeyboardEvent();
+    if (event->IsKeyDownEvent()) {
       aEvent->message = NS_KEY_DOWN;
-    } else if (keyboardEvent->IsKeyUpEvent()) {
+    } else if (event->IsKeyUpEvent()) {
       aEvent->message = NS_KEY_UP;
     }
+  }
+    // Fall down
+  case NS_KEY_EVENT: {
     return remote->SendRealKeyEvent(*aEvent->AsKeyboardEvent());
   }
   case NS_WHEEL_EVENT: {
@@ -2690,6 +2693,15 @@ EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
                                                             aStatus);
   if (!dispatchedToContentProcess) {
     // Dispatch 'mozbrowserafterkeydown'/'mozbrowserafterkeyup' for in-process case.
+    if (aEvent->eventStructType == NS_BEFORE_AFTER_KEY_EVENT) {
+      WidgetBeforeAfterKeyboardEvent* event = aEvent->AsBeforeAfterKeyboardEvent();
+      if (event) {
+        aEvent->message = (event->IsKeyDownEvent()) ?
+                          NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
+      } else {
+        LOG("failed to cast event pointer");
+      }
+    }
     if (aEvent->message == NS_KEY_DOWN ||
         aEvent->message == NS_KEY_UP ||
         aEvent->message == NS_KEY_BEFORE_DOWN ||
@@ -2698,7 +2710,6 @@ EventStateManager::PostHandleEvent(nsPresContext* aPresContext,
       nsIContent* target = frame ? frame->GetContent() : nullptr;
       nsIPresShell* presShell = mPresContext->PresShell();
       if (target && presShell && !IsRemoteTarget(target)) {
-        aEvent->message = (aEvent->AsKeyboardEvent()->IsKeyDownEvent()) ? NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
         presShell->DispatchKeyboardEvent(target, aEvent->AsKeyboardEvent(), aStatus);
       }
     }

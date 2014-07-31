@@ -36,6 +36,7 @@ enum nsEventStructType
   NS_QUERY_CONTENT_EVENT,            // WidgetQueryContentEvent
   NS_SELECTION_EVENT,                // WidgetSelectionEvent
   NS_EDITOR_INPUT_EVENT,             // InternalEditorInputEvent
+  NS_BEFORE_AFTER_KEY_EVENT,         // WidgetBeforeAfterKeyboardEvent
 
   // MouseEvents.h
   NS_MOUSE_EVENT,                    // WidgetMouseEvent

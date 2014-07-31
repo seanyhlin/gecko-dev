@@ -6,7 +6,7 @@
 
 interface WindowProxy;
 
-interface BrowserElementKeyboardEvent : KeyboardEvent
+interface BeforeAfterKeyboardEvent : KeyboardEvent
 {
   // The valid value of embeddedCancelled is:
   // - "mozbrowserbeforekeydown": null
@@ -16,7 +16,7 @@ interface BrowserElementKeyboardEvent : KeyboardEvent
   readonly attribute boolean? embeddedCancelled;
 };
 
-dictionary BrowserElementKeyboardEventInit : KeyboardEventInit
+dictionary BeforeAfterKeyboardEventInit : KeyboardEventInit
 {
   boolean? embeddedCancelled = null;
 };

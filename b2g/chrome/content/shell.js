@@ -415,7 +415,14 @@ var shell = {
         break;
     }
 
-    dump("[shell] evt.type: " + evt.type + ", key: " + evt.key + ", keyCode: " + evt.keyCode + ', type: ' + type);
+    if (evt.key == '') {
+      // FIXME
+      evt.stopImmediatePropagation();
+      evt.preventDefault();
+    } else {
+      dump("[shell] evt.type: " + evt.type + ", key: " + evt.key + ", keyCode: " + evt.keyCode + ', type: ' + type);
+    }
+
     let mediaKeys = {
       'MediaNextTrack': 'media-next-track-button',
       'MediaPreviousTrack': 'media-previous-track-button',
@@ -462,7 +469,6 @@ var shell = {
         return;
     }
 
-    dump('[shell] type: ' + type);
     // Let applications receive the headset button key press/release event.
     if (keyCode == evt.DOM_VK_F1 &&
         type !== this.lastHardwareButtonEventType) {
@@ -486,7 +492,6 @@ var shell = {
     // FIXME: https://bugzilla.mozilla.org/show_bug.cgi?id=761067
     if (type !== this.lastHardwareButtonEventType) {
       this.lastHardwareButtonEventType = type;
-      dump('[shell] sendChromeEvent: ' + type);
       this.sendChromeEvent({type: type});
     }
   },

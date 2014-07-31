@@ -274,10 +274,10 @@ NS_NewDOMKeyboardEvent(nsIDOMEvent** aInstancePtrResult,
                        mozilla::WidgetKeyboardEvent* aEvent);
 
 nsresult
-NS_NewDOMBrowserElementKeyboardEvent(nsIDOMEvent** aInstancePtrResult,
-                                     mozilla::dom::EventTarget* aOwner,
-                                     nsPresContext* aPresContext,
-                                     mozilla::WidgetKeyboardEvent* aEvent);
+NS_NewDOMBeforeAfterKeyboardEvent(nsIDOMEvent** aInstancePtrResult,
+                                  mozilla::dom::EventTarget* aOwner,
+                                  nsPresContext* aPresContext,
+                                  mozilla::WidgetKeyboardEvent* aEvent);
 
 nsresult
 NS_NewDOMCompositionEvent(nsIDOMEvent** aInstancePtrResult,
