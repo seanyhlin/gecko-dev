@@ -7705,10 +7705,15 @@ PresShell::DispatchKeyboardEvent(nsINode* aTarget,
     if (node->NodeName().Find("IFRAME") == -1) {
       if (isBefore) {
         // Going to dispatch 'keydown'/'keyup'.
-        aEvent->message = eventMessage;
         aEvent->mFlags.mWantReplyFromContentProcess = true;
         EventDispatcher::Dispatch(static_cast<nsISupports*>(aTarget), mPresContext,
                                   aEvent, nullptr, aStatus, aEventCB);
+
+        uint32_t message = (aEvent->message == NS_KEY_DOWN) ? NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
+
+        WidgetKeyboardEvent newEvent(true, message, aEvent->widget);
+        newEvent.AssignKeyEventData(*aEvent, false);
+        DispatchKeyboardEvent(aTarget, newEvent.AsKeyboardEvent(), aStatus, aEventCB);
         break;
       } else {
         continue;

@@ -338,6 +338,8 @@ var shell = {
     chromeEventHandler.addEventListener('keyup', this, true);
     chromeEventHandler.addEventListener('mozbrowserbeforekeydown', this, true);
     chromeEventHandler.addEventListener('mozbrowserbeforekeyup', this, true);
+    chromeEventHandler.addEventListener('mozbrowserafterkeyup', this, true);
+    chromeEventHandler.addEventListener('mozbrowserafterkeydown', this, true);
 
     window.addEventListener('MozApplicationManifest', this);
     window.addEventListener('mozfullscreenchange', this);
@@ -369,6 +371,8 @@ var shell = {
     window.removeEventListener('keyup', this, true);
     window.removeEventListener('mozbrowserbeforekeydown', this, true);
     window.removeEventListener('mozbrowserbeforekeyup', this, true);
+    window.removeEventListener('mozbrowserafterkeydown', this, true);
+    window.removeEventListener('mozbrowserafterkeyup', this, true);
     window.removeEventListener('MozApplicationManifest', this);
     window.removeEventListener('mozfullscreenchange', this);
     window.removeEventListener('sizemodechange', this);
@@ -421,6 +425,11 @@ var shell = {
       evt.preventDefault();
     } else {
       dump("[shell] evt.type: " + evt.type + ", key: " + evt.key + ", keyCode: " + evt.keyCode + ', type: ' + type);
+    }
+
+    if (evt.type == 'mozbrowserafterkeydown' ||
+        evt.type == 'mozbrowserafterkeyup') {
+      return;    
     }
 
     let mediaKeys = {
@@ -507,6 +516,8 @@ var shell = {
       case 'keypress':
       case 'mozbrowserbeforekeydown':
       case 'mozbrowserbeforekeyup':
+      case 'mozbrowserafterkeydown':
+      case 'mozbrowserafterkeyup':
         this.filterHardwareKeys(evt);
         break;
       case 'mozfullscreenchange':
