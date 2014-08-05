@@ -194,6 +194,16 @@ public:
     mNativeKeyEvent = nullptr;
     mUniqueId = aEvent.mUniqueId;
   }
+
+  bool IsBeforeKeyEvent()
+  {
+    return (message == NS_KEY_BEFORE_DOWN || message == NS_KEY_BEFORE_UP);
+  }
+
+  bool IsAfterKeyEvent()
+  {
+    return (message == NS_KEY_AFTER_DOWN || message == NS_KEY_AFTER_UP);
+  }
 };
 
 
