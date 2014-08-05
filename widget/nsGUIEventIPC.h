@@ -363,6 +363,23 @@ struct ParamTraits<mozilla::WidgetKeyboardEvent>
 };
 
 template<>
+struct ParamTraits<mozilla::InternalBeforeAfterKeyboardEvent>
+{
+  typedef mozilla::InternalBeforeAfterKeyboardEvent paramType;
+
+  static void Write(Message* aMsg, const paramType& aParam)
+  {
+    WriteParam(aMsg, static_cast<mozilla::WidgetKeyboardEvent>(aParam));
+  }
+
+  static bool Read(const Message* aMsg, void** aIter, paramType* aResult)
+  {
+    return ReadParam(aMsg, aIter,
+                     static_cast<mozilla::WidgetKeyboardEvent*>(aResult));
+  }
+};
+
+template<>
 struct ParamTraits<mozilla::TextRangeStyle>
 {
   typedef mozilla::TextRangeStyle paramType;
