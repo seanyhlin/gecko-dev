@@ -372,6 +372,10 @@ public:
 
   virtual void RecordShadowStyleChange(mozilla::dom::ShadowRoot* aShadowRoot);
 
+  virtual void DispatchAfterKeyboardEvent(nsINode* aTarget,
+                                          const mozilla::WidgetKeyboardEvent& aEvent,
+                                          bool aEmbeddedCancelled) MOZ_OVERRIDE;
+
   void SetNextPaintCompressed() { mNextPaintCompressed = true; }
 
 protected:

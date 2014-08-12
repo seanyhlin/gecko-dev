@@ -53,6 +53,7 @@
 #include "nsIWindowWatcher.h"
 #include "nsPIDOMWindow.h"
 #include "nsPIWindowWatcher.h"
+#include "nsPresShell.h"
 #include "nsPrintfCString.h"
 #include "nsServiceManagerUtils.h"
 #include "nsThreadUtils.h"
@@ -1357,11 +1358,11 @@ TabParent::GetChildProcessOffset()
 }
 
 bool
-TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
+TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& aEvent)
 {
   NS_ENSURE_TRUE(mFrameElement, true);
 
-  WidgetKeyboardEvent localEvent(event);
+  WidgetKeyboardEvent localEvent(aEvent);
   // Set mNoCrossProcessBoundaryForwarding to avoid this event from
   // being infinitely redispatched and forwarded to the child again.
   localEvent.mFlags.mNoCrossProcessBoundaryForwarding = true;
@@ -1370,11 +1371,16 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& event)
   // to be able to dispatch it to the <browser> element as the target element.
   nsIDocument* doc = mFrameElement->OwnerDoc();
   nsIPresShell* presShell = doc->GetShell();
-  NS_ENSURE_TRUE(presShell, true);
-  nsPresContext* presContext = presShell->GetPresContext();
-  NS_ENSURE_TRUE(presContext, true);
-
-  EventDispatcher::Dispatch(mFrameElement, presContext, &localEvent);
+  if (presShell) {
+    if (localEvent.message == NS_KEY_PRESS) {
+      nsPresContext* presContext = presShell->GetPresContext();
+      EventDispatcher::Dispatch(mFrameElement, presContext, &localEvent);
+    } else {
+      nsCOMPtr<nsINode> node(do_QueryInterface(mFrameElement));
+      presShell->DispatchAfterKeyboardEvent(node, localEvent,
+                                            aEvent.mFlags.mDefaultPrevented);
+    }
+  }
   return true;
 }
 

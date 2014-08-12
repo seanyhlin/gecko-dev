@@ -78,6 +78,7 @@ class nsDisplayList;
 class nsDisplayListBuilder;
 class nsPIDOMWindow;
 struct nsPoint;
+class nsINode;
 struct nsIntPoint;
 struct nsIntRect;
 struct nsRect;
@@ -100,6 +101,7 @@ typedef short SelectionType;
 
 namespace mozilla {
 class EventStates;
+class EventDispatchingCallback;
 
 namespace dom {
 class Element;
@@ -852,6 +854,13 @@ public:
   virtual nsresult HandleDOMEventWithTarget(nsIContent* aTargetContent,
                                                         nsIDOMEvent* aEvent,
                                                         nsEventStatus* aStatus) = 0;
+
+  /**
+   * Dispatch AfterKeyboardEvent with specific target.
+   */
+  virtual void DispatchAfterKeyboardEvent(nsINode* aTarget,
+                                          const mozilla::WidgetKeyboardEvent& aEvent,
+                                          bool aEmbeddedCancelled) = 0;
 
   /**
     * Gets the current target event frame from the PresShell
