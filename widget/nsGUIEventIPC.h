@@ -370,12 +370,14 @@ struct ParamTraits<mozilla::InternalBeforeAfterKeyboardEvent>
   static void Write(Message* aMsg, const paramType& aParam)
   {
     WriteParam(aMsg, static_cast<mozilla::WidgetKeyboardEvent>(aParam));
+    WriteParam(aMsg, aParam.mEmbeddedCancelled);
   }
 
   static bool Read(const Message* aMsg, void** aIter, paramType* aResult)
   {
     return ReadParam(aMsg, aIter,
-                     static_cast<mozilla::WidgetKeyboardEvent*>(aResult));
+                     static_cast<mozilla::WidgetKeyboardEvent*>(aResult)) &&
+           ReadParam(aMsg, aIter, &aResult->mEmbeddedCancelled);
   }
 };
 

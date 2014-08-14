@@ -215,10 +215,15 @@ private:
   friend class dom::PBrowserChild;
 
   InternalBeforeAfterKeyboardEvent()
+    : mEmbeddedCancelled(false)
   {
   }
 
 public:
+  // Extra member for InternalBeforeAfterKeyboardEvent. Indicates whether
+  // default actions of keydown/keyup event is prevented.
+  bool mEmbeddedCancelled;
+
   virtual InternalBeforeAfterKeyboardEvent* AsBeforeAfterKeyboardEvent() MOZ_OVERRIDE
   {
     return this;
@@ -227,6 +232,7 @@ public:
   InternalBeforeAfterKeyboardEvent(bool aIsTrusted, uint32_t aMessage,
                                    nsIWidget* aWidget)
     : WidgetKeyboardEvent(aIsTrusted, aMessage, aWidget, eBeforeAfterKeyboardEventClass)
+    , mEmbeddedCancelled(false)
   {
     MOZ_ASSERT(IsBeforeKeyEvent() || IsAfterKeyEvent());
   }
@@ -248,6 +254,7 @@ public:
          bool aCopyTargets)
   {
     AssignKeyEventData(aEvent, aCopyTargets);
+    mEmbeddedCancelled = aEvent.mEmbeddedCancelled;
   }
 
   void AssignBeforeAfterKeyEventData(
