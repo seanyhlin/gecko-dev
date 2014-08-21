@@ -19,8 +19,6 @@ KeyboardEvent::KeyboardEvent(EventTarget* aOwner,
   , mInitializedByCtor(false)
   , mInitializedWhichValue(0)
 {
-  NS_ASSERTION(mEvent->mClass == eKeyboardEventClass, "event type mismatch");
-
   if (aEvent) {
     mEventIsInternal = false;
   }
