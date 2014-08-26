@@ -1,0 +1,252 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Test for DOM BeforeAfterKeyboardEvent</title>
+  <script type="application/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <script type="application/javascript" src="/tests/SimpleTest/EventUtils.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"/>
+</head>
+<body>
+<p id="display"></p>
+<div id="content" style="display: none">
+  
+</div>
+<pre id="test">
+<script type="application/javascript">
+
+const gManifestURL =
+"http://www.example.com/chrome/dom/tests/mochitest/webapps/apps/basic.webapp";
+var gApp;
+
+SpecialPowers.pushPermissions([
+  {type: "system", allow: true, context: document},
+  {type: "embed-apps", allow: true, context: document},
+  {type: "webapps-manage", allow: true, context: document}
+], runTests);
+
+SimpleTest.waitForExplicitFinish();
+
+function handler(aEvent)
+{
+  ok(true, "receive event " + aEvent.type);
+}
+
+function setup()
+{
+	window.addEventListener('keydown', handler, false);
+  window.addEventListener('keyup', handler, false);
+  window.addEventListener('mozbrowserbeforekeydown', handler, false);
+  window.addEventListener('mozbrowserbeforekeyup', handler, false);
+  window.addEventListener('mozbrowserafterkeydown', handler, false);
+	window.addEventListener('mozbrowserafterkeyup', handler, false);
+
+  runTests();
+}
+
+function cleanup()
+{
+	window.removeEventListener('keydown', handler);
+  window.removeEventListener('keyup', handler, false);
+  window.removeEventListener('mozbrowserbeforekeydown', handler, false);
+  window.removeEventListener('mozbrowserbeforekeyup', handler, false);
+  window.removeEventListener('mozbrowserafterkeydown', handler, false);
+  window.removeEventListener('mozbrowserafterkeyup', handler, false);
+	
+  runTests();
+}
+
+function onError()
+{
+  ok(false, "Error callback invoked: " + this.error.name);
+  SimpleTest.finish();
+}
+
+function installApp()
+{
+  info("installApp");
+  var request = navigator.mozApps.install(gManifestURL);
+	request.onerror = onError;
+  request.onsuccess = function() {
+    gApp = request.result;
+    runTests();
+  }
+}
+
+function uninstallApp()
+{
+  info("uninstallApp");
+	var request = navigator.mozApps.mgmt.uninstall(gApp);
+  request.onerror = onError;
+  request.onsuccess = function() {
+    info("All done");
+
+    runTests();
+  }
+}
+
+function setupApp()
+{
+  info("setupApp");
+  var ifr = document.createElement("iframe");
+  ifr.setAttribute("mozbrowser", "true");
+	ifr.setAttribute("mozapp", gApp.manifestURL);
+	ifr.setAttribute("src", gApp.manifest.launch_path);
+
+	var domParent = document.getElementById("content");
+
+  // Set us up to listen for messages from the app.
+  var handler = function(e) {
+    var message = e.detail.message;
+    if (/^OK/.exec(message)) {
+      ok(true, "Message from app: " + message);
+    } else if (/KO/.exec(message)) {
+      ok(false, "Message from app: " + message);
+    } else if (/DONE/.exec(message)) {
+			ok(true, "Messaging from app complete");
+
+      ifr.removeEventListener("keydown", handler, false);
+      ifr.removeEventListener("keyup", handler, false);
+      ifr.removeEventListener("mozbrowserbeforekeydown", handler, false);
+      ifr.removeEventListener("mozbrowserbeforekeyup", handler, false);
+      ifr.removeEventListener("mozbrowserafterkeydown", handler, false);
+      ifr.removeEventListener("mozbrowserafterkeyup", handler, false);
+ 
+      domParent.removeChild(ifr);
+      runTests();
+    }
+  }
+
+  ifr.addEventListener("keydown", handler, false);
+  ifr.addEventListener("keyup", handler, false);
+  ifr.addEventListener("mozbrowserbeforekeydown", handler, false);
+  ifr.addEventListener("mozbrowserbeforekeyup", handler, false);
+  ifr.addEventListener("mozbrowserafterkeydown", handler, false);
+  ifr.addEventListener("mozbrowserafterkeyup", handler, false);
+	domParent.appendChild(ifr);
+
+  var event = { shiftKey: false, ctrlKey: false, altKey: false, metaKey: false,
+               location: KeyboardEvent.DOM_KEY_LOCATION_STANDARD };
+	synthesizeKey("a", event);
+
+  runTests();
+}
+
+var tests = [
+  setup,
+
+	// Install the App
+  installApp,
+
+  // Run tests in the App
+	setupApp,
+
+	// Uninstall the App
+	uninstallApp,
+
+  cleanup
+];
+
+function testInitializingUntrustedEvent()
+{
+  const kTests = [
+    { createEventArg: "BeforeAfterKeyboardEvent",
+      type: "mozbrowserbeforekeydown", bubbles: true, cancelable: true, view: null,
+      ctrlKey: false, altKey: false, shiftKey: false, metaKey: false,
+			keyCode: 0x00, charCode: 0x00, embeddedCancelled: null },
+  ];
+
+	is(true, true, "hello world");
+	for (var i = 0; i < kTests.length; i++) {
+		var description = "testInitializingUntrustedEvent, Index: " + i + ", ";
+		const kTest = kTests[i];
+    var e = new BeforeAfterKeyboardEvent(kTest.createEventArg, {
+			bubbles: kTest.bubbles, cancelable: kTest.cancelable, view: kTest.view,
+      ctrlKey: kTest.ctrlKey, altKey: kTest.altKey, shiftKey: kTest.shiftKey,
+      metaKey: kTest.metaKey, keyCode: kTest.keyCode, charCode: kTest.charCode,
+      embeddedCancelled: kTest.embeddedCancelled
+		});
+
+    is(e.ctrlKey, kTest.ctrlKey, "Correct ctrlKey");
+    is(e.altKey, kTest.altKey, "Correct altKey");
+    is(e.shiftKey, kTest.shiftKey, "Correct shiftKey");
+    is(e.metaKey, kTest.metaKey, "Correct metaKey");
+    is(e.keyCode, kTest.keyCode, "Correct keyCode");
+    is(e.charCode, kTest.charCode, "Correct charCode");
+
+//    var e = document.createEvent(kTest.createEventArg);
+/*    e.initKeyEvent(kTest.type, kTest.bubbles, kTest.cancelable, kTest.view,
+                   kTest.ctrlKey, kTest.altKey, kTest.shiftKey, kTest.metaKey,
+                   kTest.keyCode, kTest.charCode);
+    is(e.toString(), "[object KeyboardEvent]",
+       description + 'class string should be "KeyboardEvent"');
+
+    for (var attr in kTest) {
+      if (attr == "createEventArg") {
+        continue;
+      }
+      if (attr == "keyCode") {
+        // If this is keydown, keyup of keypress event, keycod must be correct.
+        if (kTest.type == "keydown" || kTest.type == "keyup" || kTest.type == "keypress") {
+        is(e[attr], kTest[attr], description + attr + " returns wrong value");
+        // Otherwise, should be always zero (why?)
+        } else {
+          is(e[attr], 0, description + attr + " returns non-zero for invalid event");
+        }
+      } else if (attr == "charCode") {
+        // If this is keydown or keyup event, charCode always 0.
+        if (kTest.type == "keydown" || kTest.type == "keyup") {
+          is(e[attr], 0, description + attr + " returns non-zero for keydown or keyup event");
+        // If this is keypress event, charCode must be correct.
+        } else if (kTest.type == "keypress") {
+          is(e[attr], kTest[attr], description + attr + " returns wrong value");
+        // Otherwise, we have a bug.
+        } else {
+          if (e[attr] != kTest[attr]) { // avoid random unexpected pass.
+            todo_is(e[attr], kTest[attr], description + attr + " returns wrong value");
+          }
+        }
+      } else {
+        is(e[attr], kTest[attr], description + attr + " returns wrong value");
+      }
+    }
+    is(e.isTrusted, false, description + "isTrusted returns wrong value");
+
+    // key and code values cannot be initialized with initKeyEvent().
+    is(e.key, "", description + "key must return empty string");
+
+    // getModifierState() tests
+    is(e.getModifierState("Shift"), kTest.shiftKey,
+       description + "getModifierState(\"Shift\") returns wrong value");
+    is(e.getModifierState("Control"), kTest.ctrlKey,
+       description + "getModifierState(\"Control\") returns wrong value");
+    is(e.getModifierState("Alt"), kTest.altKey,
+       description + "getModifierState(\"Alt\") returns wrong value");
+    is(e.getModifierState("Meta"), kTest.metaKey,
+       description + "getModifierState(\"Meta\") returns wrong value");
+
+    for (var j = 0; j < kOtherModifierName.length; j++) {
+      ok(!e.getModifierState(kOtherModifierName[j]),
+         description + "getModifierState(\"" + kOtherModifierName[j] + "\") returns wrong value");
+    }
+    for (var k = 0; k < kInvalidModifierName.length; k++) {
+      ok(!e.getModifierState(kInvalidModifierName[k]),
+         description + "getModifierState(\"" + kInvalidModifierName[k] + "\") returns wrong value");
+    }*/
+	}
+}
+
+function runTests()
+{
+  if (!tests.length) {
+    SimpleTest.finish();
+    return;
+	}
+
+  var test = tests.shift();
+  test();
+}
+
+</script>
+</pre>
+</body>
+</html>

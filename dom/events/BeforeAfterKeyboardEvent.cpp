@@ -29,9 +29,6 @@ BeforeAfterKeyboardEvent::BeforeAfterKeyboardEvent(
 {
   MOZ_ASSERT(mEvent->mClass == eBeforeAfterKeyboardEventClass,
              "event type mismatch eBeforeAfterKeyboardEventClass");
-  MOZ_ASSERT(aEvent &&
-             (aEvent->IsBeforeKeyEvent() || aEvent->IsAfterKeyEvent()),
-             "event message mismatch");
 
   if (!aEvent) {
     mEventIsInternal = true;

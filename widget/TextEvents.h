@@ -244,7 +244,6 @@ public:
     : WidgetKeyboardEvent(aIsTrusted, aMessage, aWidget, eBeforeAfterKeyboardEventClass)
     , mEmbeddedCancelled(false)
   {
-    MOZ_ASSERT(IsBeforeKeyEvent() || IsAfterKeyEvent());
   }
 
   virtual WidgetEvent* Duplicate() const MOZ_OVERRIDE
