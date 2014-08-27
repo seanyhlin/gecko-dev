@@ -326,8 +326,8 @@ var shell = {
     chromeEventHandler.addEventListener('keyup', this, true);
     chromeEventHandler.addEventListener('mozbrowserbeforekeydown', this, true);
     chromeEventHandler.addEventListener('mozbrowserbeforekeyup', this, true);
-    chromeEventHandler.addEventListener('mozbrowserafterkeyup', this, true);
-    chromeEventHandler.addEventListener('mozbrowserafterkeydown', this, true);
+//    chromeEventHandler.addEventListener('mozbrowserafterkeyup', this, true);
+//    chromeEventHandler.addEventListener('mozbrowserafterkeydown', this, true);
 
     window.addEventListener('MozApplicationManifest', this);
     window.addEventListener('mozfullscreenchange', this);
@@ -360,8 +360,8 @@ var shell = {
     window.removeEventListener('keyup', this, true);
     window.removeEventListener('mozbrowserbeforekeydown', this, true);
     window.removeEventListener('mozbrowserbeforekeyup', this, true);
-    window.removeEventListener('mozbrowserafterkeydown', this, true);
-    window.removeEventListener('mozbrowserafterkeyup', this, true);
+//    window.removeEventListener('mozbrowserafterkeydown', this, true);
+//    window.removeEventListener('mozbrowserafterkeyup', this, true);
     window.removeEventListener('MozApplicationManifest', this);
     window.removeEventListener('mozfullscreenchange', this);
     window.removeEventListener('sizemodechange', this);
@@ -377,14 +377,8 @@ var shell = {
   // and send a mozChromeEvent with detail.type set to xxx-button-press or
   // xxx-button-release instead.
   filterHardwareKeys: function shell_filterHardwareKeys(evt) {
-    var keyCode = evt.keyCode;
-/*    if (evt.type == 'mozbrowserbeforekeydown' ||
-        evt.type == 'mozbrowserbeforekeyup') {
-      keyCode = evt.detail.keyCode;
-    }*/
-
     var type;
-    switch (keyCode) {
+    switch (evt.keyCode) {
       case evt.DOM_VK_HOME:         // Home button
         type = 'home-button';
         break;
@@ -416,13 +410,6 @@ var shell = {
     } else {
       dump("[shell] evt.type: " + evt.type + ", key: " + evt.key + ", keyCode: " + evt.keyCode);
       dump("[shell] type: " + type);
-    }
-
-    if (evt.type == 'mozbrowserafterkeydown' ||
-        evt.type == 'mozbrowserafterkeyup') {
-      return;    
-    } else if (evt.type == 'mozbrowserbeforekeydown' ||
-               evt.type == 'mozbrowserbeforekeyup') {
     }
 
     let mediaKeys = {

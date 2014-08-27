@@ -1394,7 +1394,7 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& aEvent)
     EventDispatcher::Dispatch(mFrameElement, presContext, &localEvent);
     return true;
   }
-      
+
   nsCOMPtr<nsINode> node(do_QueryInterface(mFrameElement));
   LOG("[TabParent] mDefaultPrevented: %d", aEvent.mFlags.mDefaultPrevented);
   presShell->DispatchAfterKeyboardEvent(node, localEvent,

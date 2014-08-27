@@ -171,7 +171,6 @@
 #include "gfxPlatform.h"
 #include "Layers.h"
 #include "LayerTreeInvalidation.h"
-#include "mozilla/dom/BrowserElementDictionariesBinding.h"
 #include "mozilla/css/ImageLoader.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/Telemetry.h"
@@ -6886,33 +6885,31 @@ BuildTargetChainForBeforeAfterKeyboardEvent(nsINode* aTarget,
   }
 }
 
-bool
+void
 PresShell::DispatchBeforeKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> >& aChain,
                                                const WidgetKeyboardEvent& aEvent,
-                                               size_t& aChainIndex)
+                                               size_t& aChainIndex,
+                                               bool& aDefaultPrevented)
 {
   LOG("[%s]", __FUNCTION__);
 
+  size_t length = aChain.Length();
+  if (!CanDispatchEvent(&aEvent) || !length) {
+    return;
+  }
+  LOG("length: %lu", length);
+
   uint32_t message =
     (aEvent.message == NS_KEY_DOWN) ? NS_KEY_BEFORE_DOWN : NS_KEY_BEFORE_UP;
-  size_t length = aChain.Length();
-  if (!length) {
-    return true;
-  }
-
-  LOG("length: %lu", length);
   nsCOMPtr<EventTarget> eventTarget;
   // Dispatch before events from the outermost element.
   for (int32_t i = length - 1; i >= 0; i--) {
     eventTarget = do_QueryInterface(aChain[i]->OwnerDoc()->GetWindow());
-    if (!eventTarget) {
-      return false;
+    if (!eventTarget || !CanDispatchEvent(&aEvent)) {
+      LOG("[%s] return at i=%d", __FUNCTION__, i);
+      return;
     }
 
-    if (!aEvent.widget || aEvent.widget->Destroyed()) {
-      return false;
-    }
- 
     aChainIndex = i;
     InternalBeforeAfterKeyboardEvent beforeEvent(aEvent.mFlags.mIsTrusted,
                                                  message, aEvent.widget);
@@ -6925,14 +6922,12 @@ PresShell::DispatchBeforeKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> 
     EventDispatcher::Dispatch(eventTarget, mPresContext, &beforeEvent,
                               domEvent);
 
-    LOG("Destroyed: %d", aEvent.widget->Destroyed());
     if (beforeEvent.mFlags.mDefaultPrevented) {
+      aDefaultPrevented = true;
       LOG("[%s] preventDefault, return %lu", __FUNCTION__, aChainIndex);
-      return false;
+      return;
     }
   }
-
-  return true;
 }
 
 void
@@ -6941,35 +6936,38 @@ PresShell::DispatchAfterKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> >
                                               bool aEmbeddedCancelled,
                                               size_t aStartOffset)
 {
-  LOG("[%s]", __FUNCTION__);
+  LOG("[%s], message: %d", __FUNCTION__, aEvent.message);
 
-  uint32_t message =
-    (aEvent.message == NS_KEY_DOWN) ? NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
-  bool embeddedCancelled = aEmbeddedCancelled;
+  if (!CanDispatchEvent(&aEvent)) {
+    return;
+  }
+
   size_t length = aChain.Length();
   if (!length) {
     return;
   }
 
+  uint32_t message =
+    (aEvent.message == NS_KEY_DOWN) ? NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
+  bool embeddedCancelled = aEmbeddedCancelled;
+
   nsCOMPtr<EventTarget> eventTarget;
-  nsCOMPtr<nsIDOMEvent> domEvent;
   LOG("length: %lu, aStartOffset: %lu", length, aStartOffset);
   // Dispatch after events from the innermost element.
   for (uint32_t i = aStartOffset; i < length; i++) {
     eventTarget = do_QueryInterface(aChain[i]->OwnerDoc()->GetWindow());
-    if (!eventTarget) {
-      return;
-    }
-
-    if (!aEvent.widget || aEvent.widget->Destroyed()) {
+    if (!eventTarget || !CanDispatchEvent(&aEvent)) {
+      LOG("[%s] return at i=%d", __FUNCTION__, i);
       return;
     }
 
     InternalBeforeAfterKeyboardEvent afterEvent(aEvent.mFlags.mIsTrusted,
                                                 message, aEvent.widget);
     afterEvent.AssignBeforeAfterKeyEventData(aEvent, false);
-    afterEvent.mEmbeddedCancelled = embeddedCancelled;
+    afterEvent.mEmbeddedCancelled.SetValue(embeddedCancelled);
     afterEvent.mFlags.mWantReplyFromContentProcess = true;
+
+    nsCOMPtr<nsIDOMEvent> domEvent;
     EventDispatcher::CreateEvent(eventTarget, mPresContext, &afterEvent,
                                  EmptyString(), getter_AddRefs(domEvent));
     EventDispatcher::Dispatch(eventTarget, mPresContext, &afterEvent,
@@ -6988,8 +6986,8 @@ PresShell::DispatchAfterKeyboardEvent(nsINode* aTarget,
 
   MOZ_ASSERT(aTarget);
 
-  if (aEvent.message != NS_KEY_DOWN && aEvent.message != NS_KEY_UP) {
-    NS_WARNING("event message mistatch");
+  if (NS_WARN_IF(aEvent.message != NS_KEY_DOWN &&
+                 aEvent.message != NS_KEY_UP)) {
     return;
   }
 
@@ -6998,6 +6996,18 @@ PresShell::DispatchAfterKeyboardEvent(nsINode* aTarget,
   bool targetIsIframe;
   BuildTargetChainForBeforeAfterKeyboardEvent(aTarget, chain, targetIsIframe);
   DispatchAfterKeyboardEventInternal(chain, aEvent, aEmbeddedCancelled);
+}
+
+bool
+PresShell::CanDispatchEvent(const WidgetGUIEvent* aEvent) const
+{
+  if ((aEvent && (!aEvent->widget || aEvent->widget->Destroyed())) ||
+      !mPresContext || mHaveShutDown ||
+      !nsContentUtils::IsSafeToRunScript()) {
+    return false;
+  }
+
+  return true;
 }
 
 void
@@ -7023,14 +7033,18 @@ PresShell::HandleKeyboardEvent(nsINode* aTarget,
   BuildTargetChainForBeforeAfterKeyboardEvent(aTarget, chain, targetIsIframe);
   LOG("targetIsIframe: %d", targetIsIframe);
 
-  // Dispatch before events. If each item in the chain handles the before
-  // event and doesn't prevent its default action, then the return value of
-  // the following function should be -1, and we should go further to dispatch
-  // the actual key event and after events. Otherwise, dispatch after events
-  // to partial items in the chain.
+  // Dispatch before events. If each item in the chain consumes the before
+  // event and doesn't prevent the default action, we will go further to
+  // dispatch the actual key event and after events in the reverse order.
+  // Otherwise, only items which has handled the before event will receive an
+  // after event.
   size_t chainIndex;
-  if (!DispatchBeforeKeyboardEventInternal(chain, aEvent, chainIndex)) {
-    // Dispatch after events to partial items.
+  bool defaultPrevented = false;
+  DispatchBeforeKeyboardEventInternal(chain, aEvent, chainIndex,
+                                      defaultPrevented);
+
+  // Dispatch after events to partial items.
+  if (defaultPrevented) {
     DispatchAfterKeyboardEventInternal(chain, aEvent,
                                        aEvent.mFlags.mDefaultPrevented, chainIndex);
 
@@ -7039,7 +7053,8 @@ PresShell::HandleKeyboardEvent(nsINode* aTarget,
     return;
   }
 
-  if (targetIsIframe) {
+  // Event listeners may kill nsPresContext and nsPresShell.
+  if (targetIsIframe || !mPresContext || mHaveShutDown) {
     return;
   }
 
@@ -7048,6 +7063,11 @@ PresShell::HandleKeyboardEvent(nsINode* aTarget,
   aEvent.mFlags.mWantReplyFromContentProcess = true;
   EventDispatcher::Dispatch(aTarget, mPresContext,
                             &aEvent, nullptr, aStatus, aEventCB);
+
+  // Event listeners may kill nsPresContext and nsPresShell.
+  if (!mPresContext || mHaveShutDown) {
+    return;
+  }
 
   // Dispatch after events to all items in the chain.
   DispatchAfterKeyboardEventInternal(chain, aEvent,

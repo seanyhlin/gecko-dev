@@ -194,16 +194,6 @@ public:
     mNativeKeyEvent = nullptr;
     mUniqueId = aEvent.mUniqueId;
   }
-
-  bool IsBeforeKeyEvent() const
-  {
-    return (message == NS_KEY_BEFORE_DOWN || message == NS_KEY_BEFORE_UP);
-  }
-
-  bool IsAfterKeyEvent() const
-  {
-    return (message == NS_KEY_AFTER_DOWN || message == NS_KEY_AFTER_UP);
-  }
 };
 
 
@@ -225,14 +215,13 @@ private:
   friend class dom::PBrowserChild;
 
   InternalBeforeAfterKeyboardEvent()
-    : mEmbeddedCancelled(false)
   {
   }
 
 public:
   // Extra member for InternalBeforeAfterKeyboardEvent. Indicates whether
   // default actions of keydown/keyup event is prevented.
-  bool mEmbeddedCancelled;
+  Nullable<bool> mEmbeddedCancelled;
 
   virtual InternalBeforeAfterKeyboardEvent* AsBeforeAfterKeyboardEvent() MOZ_OVERRIDE
   {
@@ -242,7 +231,6 @@ public:
   InternalBeforeAfterKeyboardEvent(bool aIsTrusted, uint32_t aMessage,
                                    nsIWidget* aWidget)
     : WidgetKeyboardEvent(aIsTrusted, aMessage, aWidget, eBeforeAfterKeyboardEventClass)
-    , mEmbeddedCancelled(false)
   {
   }
 
@@ -271,7 +259,6 @@ public:
          bool aCopyTargets)
   {
     AssignKeyEventData(aEvent, aCopyTargets);
-    mEmbeddedCancelled = false;
   }
 };
 

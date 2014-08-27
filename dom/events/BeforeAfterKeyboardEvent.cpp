@@ -49,10 +49,8 @@ BeforeAfterKeyboardEvent::Constructor(
   event->InitWithKeyboardEventInit(aOwner, aType, aParam, rv);
   NS_WARN_IF(rv.Failed());
 
-  InternalBeforeAfterKeyboardEvent* internalEvent =
-    event->mEvent->AsBeforeAfterKeyboardEvent();
-  internalEvent->mEmbeddedCancelled =
-    !aParam.mEmbeddedCancelled.IsNull() && aParam.mEmbeddedCancelled.Value();
+  event->mEvent->AsBeforeAfterKeyboardEvent()->mEmbeddedCancelled =
+    aParam.mEmbeddedCancelled;
 
   return event.forget();
 }
@@ -70,16 +68,19 @@ BeforeAfterKeyboardEvent::Constructor(
 }
 
 Nullable<bool>
-BeforeAfterKeyboardEvent::GetEmbeddedCancelled() const
+BeforeAfterKeyboardEvent::GetEmbeddedCancelled()
 {
-  Nullable<bool> embeddedCancelled;
-  InternalBeforeAfterKeyboardEvent* internalEvent =
-    mEvent->AsBeforeAfterKeyboardEvent();
-  if (internalEvent->IsAfterKeyEvent()) {
-    LOG("[%s] mEvent->mEmbeddedCancelled: %d", __FUNCTION__, internalEvent->mEmbeddedCancelled);
-    embeddedCancelled.SetValue(internalEvent->mEmbeddedCancelled);
+  nsAutoString type;
+  GetType(type);
+  LOG("[%s], GetType(): %s", __FUNCTION__, NS_ConvertUTF16toUTF8(type).get());
+  if (type.EqualsLiteral("mozbrowserafterkeydown") ||
+      type.EqualsLiteral("mozbrowserafterkeyup")) {
+    if (!mEvent->AsBeforeAfterKeyboardEvent()->mEmbeddedCancelled.IsNull()) {
+      LOG("[%s] mEvent->mEmbeddedCancelled: %d", __FUNCTION__, mEvent->AsBeforeAfterKeyboardEvent()->mEmbeddedCancelled.Value());
+    }
+    return mEvent->AsBeforeAfterKeyboardEvent()->mEmbeddedCancelled;
   }
-  return embeddedCancelled;
+  return Nullable<bool>();
 }
 
 } // namespace dom

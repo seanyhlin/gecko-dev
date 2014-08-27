@@ -34,7 +34,9 @@ public:
   Constructor(EventTarget* aOwner, const nsAString& aType,
               const BeforeAfterKeyboardEventInit& aEventInitDict);
 
-  Nullable<bool> GetEmbeddedCancelled() const;
+  // This function returns a boolean value when event typs is either
+  // "mozbrowserafterkeydown" or "mozbrowserafterkeyup".
+  Nullable<bool> GetEmbeddedCancelled();
 };
 
 } // namespace dom

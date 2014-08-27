@@ -730,15 +730,17 @@ protected:
                            bool aEmbeddedCancelled,
                            nsEventStatus* aStatus,
                            mozilla::EventDispatchingCallback* aEventCB);
-  bool DispatchBeforeKeyboardEventInternal(
+  void DispatchBeforeKeyboardEventInternal(
          const nsTArray<nsCOMPtr<mozilla::dom::Element> >& aChain,
          const mozilla::WidgetKeyboardEvent& aEvent,
-         size_t& aChainIndex);
+         size_t& aChainIndex,
+         bool& aDefaultPrevented);
   void DispatchAfterKeyboardEventInternal(
          const nsTArray<nsCOMPtr<mozilla::dom::Element> >& aChain,
          const mozilla::WidgetKeyboardEvent& aEvent,
          bool aEmbeddedCancelled,
          size_t aChainIndex = 0);
+  bool CanDispatchEvent(const mozilla::WidgetGUIEvent* aEvent) const;
 
   // A list of images that are visible or almost visible.
   nsTHashtable< nsRefPtrHashKey<nsIImageLoadingContent> > mVisibleImages;
