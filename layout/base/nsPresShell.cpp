@@ -216,6 +216,7 @@ nsRefPtrHashtable<nsUint32HashKey, dom::Touch>* nsIPresShell::gCaptureTouchList;
 nsRefPtrHashtable<nsUint32HashKey, nsIContent>* nsIPresShell::gPointerCaptureList;
 nsClassHashtable<nsUint32HashKey, nsIPresShell::PointerInfo>* nsIPresShell::gActivePointersIds;
 bool nsIPresShell::gPreventMouseEvents = false;
+nsIWidget* nsIPresShell::gKeyWidget;
 
 // convert a color value to a string, in the CSS format #RRGGBB
 // *  - initially created for bugs 31816, 20760, 22963
@@ -6894,7 +6895,7 @@ PresShell::DispatchBeforeKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> 
   LOG("[%s]", __FUNCTION__);
 
   size_t length = aChain.Length();
-  if (!CanDispatchEvent(&aEvent) || !length) {
+  if (!CanDispatchEvent() || !length) {
     return;
   }
   LOG("length: %lu", length);
@@ -6905,7 +6906,7 @@ PresShell::DispatchBeforeKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> 
   // Dispatch before events from the outermost element.
   for (int32_t i = length - 1; i >= 0; i--) {
     eventTarget = do_QueryInterface(aChain[i]->OwnerDoc()->GetWindow());
-    if (!eventTarget || !CanDispatchEvent(&aEvent)) {
+    if (!eventTarget || !CanDispatchEvent()) {
       LOG("[%s] return at i=%d", __FUNCTION__, i);
       return;
     }
@@ -6916,11 +6917,11 @@ PresShell::DispatchBeforeKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> 
     beforeEvent.AssignBeforeAfterKeyEventData(aEvent, false);
     beforeEvent.mFlags.mWantReplyFromContentProcess = true;
 
-    nsCOMPtr<nsIDOMEvent> domEvent;
+/*    nsCOMPtr<nsIDOMEvent> domEvent;
     EventDispatcher::CreateEvent(eventTarget, mPresContext, &beforeEvent,
-                                 EmptyString(), getter_AddRefs(domEvent));
-    EventDispatcher::Dispatch(eventTarget, mPresContext, &beforeEvent,
-                              domEvent);
+                                 EmptyString(), getter_AddRefs(domEvent));*/
+    EventDispatcher::Dispatch(eventTarget, mPresContext, &beforeEvent, nullptr);
+//                              domEvent);
 
     if (beforeEvent.mFlags.mDefaultPrevented) {
       aDefaultPrevented = true;
@@ -6938,25 +6939,20 @@ PresShell::DispatchAfterKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> >
 {
   LOG("[%s], message: %d", __FUNCTION__, aEvent.message);
 
-  if (!CanDispatchEvent(&aEvent)) {
-    return;
-  }
-
   size_t length = aChain.Length();
-  if (!length) {
+  if (!CanDispatchEvent() || !length) {
     return;
   }
 
   uint32_t message =
     (aEvent.message == NS_KEY_DOWN) ? NS_KEY_AFTER_DOWN : NS_KEY_AFTER_UP;
   bool embeddedCancelled = aEmbeddedCancelled;
-
   nsCOMPtr<EventTarget> eventTarget;
   LOG("length: %lu, aStartOffset: %lu", length, aStartOffset);
   // Dispatch after events from the innermost element.
   for (uint32_t i = aStartOffset; i < length; i++) {
     eventTarget = do_QueryInterface(aChain[i]->OwnerDoc()->GetWindow());
-    if (!eventTarget || !CanDispatchEvent(&aEvent)) {
+    if (!eventTarget || !CanDispatchEvent()) {
       LOG("[%s] return at i=%d", __FUNCTION__, i);
       return;
     }
@@ -6967,11 +6963,11 @@ PresShell::DispatchAfterKeyboardEventInternal(const nsTArray<nsCOMPtr<Element> >
     afterEvent.mEmbeddedCancelled.SetValue(embeddedCancelled);
     afterEvent.mFlags.mWantReplyFromContentProcess = true;
 
-    nsCOMPtr<nsIDOMEvent> domEvent;
+/*    nsCOMPtr<nsIDOMEvent> domEvent;
     EventDispatcher::CreateEvent(eventTarget, mPresContext, &afterEvent,
-                                 EmptyString(), getter_AddRefs(domEvent));
-    EventDispatcher::Dispatch(eventTarget, mPresContext, &afterEvent,
-                              domEvent);
+                                 EmptyString(), getter_AddRefs(domEvent));*/
+    EventDispatcher::Dispatch(eventTarget, mPresContext, &afterEvent, nullptr);
+//                              domEvent);
 
     embeddedCancelled = afterEvent.mFlags.mDefaultPrevented;
   }
@@ -6999,9 +6995,24 @@ PresShell::DispatchAfterKeyboardEvent(nsINode* aTarget,
 }
 
 bool
-PresShell::CanDispatchEvent(const WidgetGUIEvent* aEvent) const
+PresShell::CanDispatchEvent() const
 {
+  if (gKeyWidget) {
+    LOG("XXX widget, Destroyed: %d", gKeyWidget->Destroyed());
+  } else {
+    LOG("XXX null widget");
+  }
+
+  if (!mPresContext) {
+    LOG("XXX null mPresContext");
+  } else if (mHaveShutDown) {
+    LOG("XXX mHaveShutDown");
+  } else if (!nsContentUtils::IsSafeToRunScript()) {
+    LOG("XXX not safe to run script");
+  }
+
   if ((aEvent && (!aEvent->widget || aEvent->widget->Destroyed())) ||
+//  if (!gKeyWidget || gKeyWidget->Destroyed() ||
       !mPresContext || mHaveShutDown ||
       !nsContentUtils::IsSafeToRunScript()) {
     return false;
@@ -7040,6 +7051,7 @@ PresShell::HandleKeyboardEvent(nsINode* aTarget,
   // after event.
   size_t chainIndex;
   bool defaultPrevented = false;
+  NS_IF_ADDREF(gKeyWidget = aEvent.widget);
   DispatchBeforeKeyboardEventInternal(chain, aEvent, chainIndex,
                                       defaultPrevented);
 
@@ -7050,6 +7062,8 @@ PresShell::HandleKeyboardEvent(nsINode* aTarget,
 
     // No need to forward the event to child process.
     aEvent.mFlags.mNoCrossProcessBoundaryForwarding = true;
+
+    NS_IF_RELEASE(gKeyWidget);
     return;
   }
 
@@ -7061,6 +7075,7 @@ PresShell::HandleKeyboardEvent(nsINode* aTarget,
   LOG("dispatch keydown/keyup event");
   // Dispatch actual key event to event target.
   aEvent.mFlags.mWantReplyFromContentProcess = true;
+
   EventDispatcher::Dispatch(aTarget, mPresContext,
                             &aEvent, nullptr, aStatus, aEventCB);
 
@@ -7072,6 +7087,7 @@ PresShell::HandleKeyboardEvent(nsINode* aTarget,
   // Dispatch after events to all items in the chain.
   DispatchAfterKeyboardEventInternal(chain, aEvent,
                                      aEvent.mFlags.mDefaultPrevented);
+  NS_IF_RELEASE(aEvent.widget);
 }
 
 nsresult

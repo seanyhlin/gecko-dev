@@ -326,8 +326,8 @@ var shell = {
     chromeEventHandler.addEventListener('keyup', this, true);
     chromeEventHandler.addEventListener('mozbrowserbeforekeydown', this, true);
     chromeEventHandler.addEventListener('mozbrowserbeforekeyup', this, true);
-//    chromeEventHandler.addEventListener('mozbrowserafterkeyup', this, true);
-//    chromeEventHandler.addEventListener('mozbrowserafterkeydown', this, true);
+    chromeEventHandler.addEventListener('mozbrowserafterkeyup', this, true);
+    chromeEventHandler.addEventListener('mozbrowserafterkeydown', this, true);
 
     window.addEventListener('MozApplicationManifest', this);
     window.addEventListener('mozfullscreenchange', this);
@@ -360,8 +360,8 @@ var shell = {
     window.removeEventListener('keyup', this, true);
     window.removeEventListener('mozbrowserbeforekeydown', this, true);
     window.removeEventListener('mozbrowserbeforekeyup', this, true);
-//    window.removeEventListener('mozbrowserafterkeydown', this, true);
-//    window.removeEventListener('mozbrowserafterkeyup', this, true);
+    window.removeEventListener('mozbrowserafterkeydown', this, true);
+    window.removeEventListener('mozbrowserafterkeyup', this, true);
     window.removeEventListener('MozApplicationManifest', this);
     window.removeEventListener('mozfullscreenchange', this);
     window.removeEventListener('sizemodechange', this);
@@ -459,7 +459,7 @@ var shell = {
     }
 
     // Let applications receive the headset button key press/release event.
-    if (keyCode == evt.DOM_VK_F1 &&
+    if (evt.keyCode == evt.DOM_VK_F1 &&
         type !== this.lastHardwareButtonEventType) {
       this.lastHardwareButtonEventType = type;
       gSystemMessenger.broadcastMessage('headset-button', type);
