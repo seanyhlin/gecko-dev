@@ -1377,11 +1377,7 @@ TabParent::RecvReplyKeyEvent(const WidgetKeyboardEvent& aEvent)
   NS_ENSURE_TRUE(mFrameElement, true);
 
   WidgetKeyboardEvent localEvent(aEvent);
-  if (aEvent.widget) {
-    LOG("[TabParent] widget");
-  } else {
-    LOG("[TabParent] null widget");
-  }
+  localEvent.widget = GetWidget();
   // Set mNoCrossProcessBoundaryForwarding to avoid this event from
   // being infinitely redispatched and forwarded to the child again.
   localEvent.mFlags.mNoCrossProcessBoundaryForwarding = true;

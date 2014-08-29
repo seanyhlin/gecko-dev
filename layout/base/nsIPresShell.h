@@ -1692,7 +1692,7 @@ protected:
   // true), then we don't bother adding the scope root here.
   nsAutoTArray<nsRefPtr<mozilla::dom::Element>,1> mChangedScopeStyleRoots;
 
-  static nsIContent*        gKeyDownTarget;
+  static nsIContent* gKeyDownTarget;
 
   // Cached font inflation values. This is done to prevent changing of font
   // inflation until a page is reloaded.
@@ -1719,8 +1719,6 @@ protected:
   // to true, so we can avoid any paint calls for widget related to this
   // presshell.
   bool mIsNeverPainting;
-
-  static nsIWidget* gKeyWidget;
 };
 
 NS_DEFINE_STATIC_IID_ACCESSOR(nsIPresShell, NS_IPRESSHELL_IID)

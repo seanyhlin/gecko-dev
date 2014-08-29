@@ -76,6 +76,9 @@ public:
   // Selection caret preference
   static bool SelectionCaretPrefEnabled();
 
+  // BeforeAfterKeyboardEvent preference
+  static bool BeforeAfterKeyboardEventEnabled();
+
   void Init(nsIDocument* aDocument, nsPresContext* aPresContext,
             nsViewManager* aViewManager, nsStyleSet* aStyleSet,
             nsCompatibility aCompatMode);
@@ -740,7 +743,7 @@ protected:
          const mozilla::WidgetKeyboardEvent& aEvent,
          bool aEmbeddedCancelled,
          size_t aChainIndex = 0);
-  bool CanDispatchEvent() const;
+  bool CanDispatchEvent(const mozilla::WidgetGUIEvent* aEvent) const;
 
   // A list of images that are visible or almost visible.
   nsTHashtable< nsRefPtrHashKey<nsIImageLoadingContent> > mVisibleImages;
