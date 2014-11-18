@@ -205,6 +205,8 @@
 #ifdef MOZ_WEBSPEECH
 @BINPATH@/components/dom_webspeechrecognition.xpt
 #endif
+@BINPATH@/components/BuiltinProviders.manifest
+@BINPATH@/components/DemoProvider.js
 @BINPATH@/components/dom_xbl.xpt
 @BINPATH@/components/dom_xpath.xpt
 @BINPATH@/components/dom_xul.xpt

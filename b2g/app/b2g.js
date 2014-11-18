@@ -297,6 +297,9 @@ pref("layers.async-pan-zoom.enabled", true);
 pref("gfx.content.azure.backends", "cairo");
 #endif
 
+// Presetation Demo Devices [format: "<name>:<ip-address>,[more entries]"
+pref("dom.presentation.demo.devices", "");
+
 // Web Notifications
 pref("notification.feature.enabled", true);
 
