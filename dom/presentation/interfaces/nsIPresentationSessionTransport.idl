@@ -1,0 +1,74 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsISupports.idl"
+
+interface nsIInputStream;
+
+/*
+ * The callbacks for events on transport channel.
+ */
+[scriptable, uuid(d0cdc638-a9d5-4bcd-838c-3aed7c3f2a6b)]
+interface nsIPresentationSessionTransportListener: nsISupports
+{
+  /*
+   * Callback for receiving a message from remote endpoint.
+   * @param msg The received message.
+   */
+  void onMessage(in DOMString msg);
+
+  /*
+   * Callback for receiving a binary message from remote endpoint.
+   * @param msg The received binary message.
+   */
+  void onBinaryMessage(in ACString msg);
+
+  /*
+   * The callback for notifying channel opened.
+   */
+  void notifyOpened();
+
+  /*
+   * The callback for notifying channel closed.
+   * @param reason The reason of channel close, NS_OK represents normal close.
+   */
+  void notifyClosed(in nsresult reason);
+};
+
+/*
+ * The transport channel for a presentation session.
+ */
+[scriptable, uuid(6bff04b9-8e79-466f-9446-f969de646fd3)]
+interface nsIPresentationSessionTransport: nsISupports
+{
+  // The listener for handling events of this transport channel.
+  // All the events should be pending until listener is assigned.
+  attribute nsIPresentationSessionTransportListener listener;
+
+  /*
+   * Send a message to remote endpiont. |onMessage| should be invoked
+   * on remote endpoint.
+   * @param msg The message to send.
+   */
+  void postMessage(in DOMString msg);
+
+  /*
+   * Send a binary message to remote endpiont. |onBinaryMessage| should
+   * be invoked on remote endpoint.
+   * @param msg The binary message to send.
+   */
+  void postBinaryMessage(in ACString msg);
+
+  /*
+   * Send a binary stream to remote endpiont. |onBinaryMessage| should
+   * be invoked on remote endpoint.
+   * @param msg The stream to send.
+   */
+  void postBinaryStream(in nsIInputStream stream);
+
+  /*
+   * Close the transport channel.
+   */
+  void close();
+};
