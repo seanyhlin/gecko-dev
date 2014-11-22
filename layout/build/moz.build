@@ -49,6 +49,7 @@ LOCAL_INCLUDES += [
     '/dom/jsurl',
     '/dom/media',
     '/dom/offline',
+    '/dom/presentation',
     '/dom/speakermanager',
     '/dom/storage',
     '/dom/svg',
