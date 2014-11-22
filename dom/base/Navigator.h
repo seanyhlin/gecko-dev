@@ -105,6 +105,9 @@ class AudioChannelManager;
 #endif
 } // namespace system
 
+// PresentationAPI
+class NavigatorPresentation;
+
 class Navigator MOZ_FINAL : public nsIDOMNavigator
                           , public nsIMozNavigatorNetwork
                           , public nsWrapperCache
@@ -204,6 +207,9 @@ public:
   {
     aRv = GetBuildID(aBuildID);
   }
+
+  already_AddRefed<NavigatorPresentation> Presentation();
+
   PowerManager* GetMozPower(ErrorResult& aRv);
   bool JavaEnabled(ErrorResult& aRv);
   bool TaintEnabled()
@@ -357,6 +363,8 @@ private:
   nsRefPtr<time::TimeManager> mTimeManager;
   nsRefPtr<ServiceWorkerContainer> mServiceWorkerContainer;
   nsCOMPtr<nsPIDOMWindow> mWindow;
+
+  nsRefPtr<NavigatorPresentation> mNavigatorPresentation;
 
   // Hashtable for saving cached objects DoResolve created, so we don't create
   // the object twice if asked for it twice, whether due to use of "delete" or

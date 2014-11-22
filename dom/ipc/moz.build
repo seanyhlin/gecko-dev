@@ -113,6 +113,7 @@ LOCAL_INCLUDES += [
     '/dom/geolocation',
     '/dom/media/webspeech/synth/ipc',
     '/dom/mobilemessage/ipc',
+    '/dom/presentation/ipc',
     '/dom/storage',
     '/editor/libeditor',
     '/embedding/components/printingui/ipc',

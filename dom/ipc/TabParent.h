@@ -10,6 +10,8 @@
 #include "mozilla/EventForwards.h"
 #include "mozilla/dom/PBrowserParent.h"
 #include "mozilla/dom/PFilePickerParent.h"
+#include "mozilla/dom/PNavigatorPresentationParent.h"
+#include "mozilla/dom/PPresentationSessionParent.h"
 #include "mozilla/dom/TabContext.h"
 #include "mozilla/dom/ipc/IdType.h"
 #include "nsCOMPtr.h"
@@ -212,6 +214,18 @@ public:
     virtual PColorPickerParent*
     AllocPColorPickerParent(const nsString& aTitle, const nsString& aInitialColor) MOZ_OVERRIDE;
     virtual bool DeallocPColorPickerParent(PColorPickerParent* aColorPicker) MOZ_OVERRIDE;
+
+    virtual PNavigatorPresentationParent*
+    AllocPNavigatorPresentationParent() MOZ_OVERRIDE;
+    virtual bool
+    DeallocPNavigatorPresentationParent(PNavigatorPresentationParent* aPresentation) MOZ_OVERRIDE;
+
+    virtual PPresentationSessionParent*
+    AllocPPresentationSessionParent(const nsCString& aURL,
+                                    const nsCString& aSessionId,
+                                    const nsCString& aDeviceId) MOZ_OVERRIDE;
+    virtual bool
+    DeallocPPresentationSessionParent(PPresentationSessionParent* aPresentation) MOZ_OVERRIDE;
 
     void LoadURL(nsIURI* aURI);
     // XXX/cjones: it's not clear what we gain by hiding these

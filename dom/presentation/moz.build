@@ -4,18 +4,50 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-DIRS += ['interfaces']
+DIRS += ['interfaces',
+         'ipc',
+]
 
 XPCSHELL_TESTS_MANIFESTS += ['tests/xpcshell/xpcshell.ini']
 MOCHITEST_MANIFESTS += ['tests/mochitest/mochitest.ini']
 
 EXPORTS.mozilla.dom.presentation += [
     'PresentationDeviceManager.h',
+    'PresentationSessionRequest.h',
 ]
 
 SOURCES += [
     'PresentationDeviceManager.cpp',
     'PresentationSessionRequest.cpp',
+]
+
+EXPORTS.mozilla.dom += [
+    'NavigatorPresentation.h',
+    'PresentationCommon.h',
+    'PresentationDeviceRequest.h',
+    'PresentationManager.h',
+    'PresentationSession.h',
+    'PresentationSessionInternal.h',
+    'PresentationSocketChannel.h',
+    'PresentationSocketChannelInternal.h',
+    'PresentationUtil.h',
+    'tests/FakePresentationStuff.h',
+]
+
+UNIFIED_SOURCES += [
+    'NavigatorPresentation.cpp',
+    'PresentationDeviceRequest.cpp',
+    'PresentationManager.cpp',
+    'PresentationSession.cpp',
+    'PresentationSessionInternal.cpp',
+    'PresentationSocketChannel.cpp',
+    'PresentationSocketChannelInternal.cpp',
+    'tests/FakePresentationStuff.cpp',
+]
+
+IPDL_SOURCES += [
+    'ipc/PNavigatorPresentation.ipdl',
+    'ipc/PPresentationSession.ipdl',
 ]
 
 EXTRA_COMPONENTS += [

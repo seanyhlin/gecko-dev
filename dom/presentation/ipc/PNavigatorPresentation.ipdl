@@ -1,0 +1,29 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+include protocol PBrowser;
+
+namespace mozilla {
+namespace dom {
+
+sync protocol PNavigatorPresentation
+{
+  manager PBrowser;
+child:
+  async NotifyDeviceAvailableStatus(bool available);
+  async NotifyDeviceSeletedStatus(nsCString origin,
+								  nsCString url,
+								  nsCString sessionId,
+								  nsCString deviceId,
+								  nsCString deviceName,
+								  nsCString deviceType);
+parent:
+  __delete__();
+  async EstablishSession(nsCString origin, nsCString url, nsCString sessionId);
+  async ResumeSession(nsCString origin, nsCString url, nsCString lastSessionId);
+};
+
+} // namespace dom
+} // namespace mozilla
+

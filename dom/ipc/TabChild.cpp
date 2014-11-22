@@ -16,6 +16,8 @@
 #include "mozilla/EventListenerManager.h"
 #include "mozilla/IntentionalCrash.h"
 #include "mozilla/dom/indexedDB/PIndexedDBPermissionRequestChild.h"
+#include "mozilla/dom/NavigatorPresentationChild.h"
+#include "mozilla/dom/PresentationSessionChild.h"
 #include "mozilla/plugins/PluginWidgetChild.h"
 #include "mozilla/ipc/DocumentRendererChild.h"
 #include "mozilla/ipc/FileDescriptorUtils.h"
@@ -2593,6 +2595,37 @@ TabChild::DeallocPColorPickerChild(PColorPickerChild* aColorPicker)
 {
   nsColorPickerProxy* picker = static_cast<nsColorPickerProxy*>(aColorPicker);
   NS_RELEASE(picker);
+  return true;
+}
+
+PNavigatorPresentationChild*
+TabChild::AllocPNavigatorPresentationChild()
+{
+  NS_RUNTIMEABORT("unused");
+  return nullptr;
+}
+
+bool
+TabChild::DeallocPNavigatorPresentationChild(PNavigatorPresentationChild* aPresentation)
+{
+  delete aPresentation;
+  return true;
+}
+
+
+PPresentationSessionChild*
+TabChild::AllocPPresentationSessionChild(const nsCString& aURL,
+                                         const nsCString& aSessionId,
+                                         const nsCString& aDeviceId)
+{
+  NS_RUNTIMEABORT("unused");
+  return nullptr;
+}
+
+bool
+TabChild::DeallocPPresentationSessionChild(PPresentationSessionChild* actor)
+{
+  delete actor;
   return true;
 }
 

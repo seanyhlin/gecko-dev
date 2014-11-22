@@ -12,7 +12,9 @@
 #include "mozIApplication.h"
 #include "mozilla/BrowserElementParent.h"
 #include "mozilla/dom/ContentParent.h"
+#include "mozilla/dom/NavigatorPresentationParent.h"
 #include "mozilla/dom/PContentPermissionRequestParent.h"
+#include "mozilla/dom/PresentationSessionParent.h"
 #include "mozilla/dom/indexedDB/ActorsParent.h"
 #include "mozilla/plugins/PluginWidgetParent.h"
 #include "mozilla/EventStateManager.h"
@@ -1930,6 +1932,34 @@ TabParent::AllocPColorPickerParent(const nsString& aTitle,
 
 bool
 TabParent::DeallocPColorPickerParent(PColorPickerParent* actor)
+{
+  delete actor;
+  return true;
+}
+
+PNavigatorPresentationParent*
+TabParent::AllocPNavigatorPresentationParent()
+{
+  return new NavigatorPresentationParent();
+}
+
+bool
+TabParent::DeallocPNavigatorPresentationParent(PNavigatorPresentationParent* actor)
+{
+  delete actor;
+  return true;
+}
+
+PPresentationSessionParent*
+TabParent::AllocPPresentationSessionParent(const nsCString& aURL,
+                                           const nsCString& aSessionId,
+                                           const nsCString& aDeviceId)
+{
+  return new PresentationSessionParent(aURL, aSessionId, aDeviceId);
+}
+
+bool
+TabParent::DeallocPPresentationSessionParent(PPresentationSessionParent* actor)
 {
   delete actor;
   return true;

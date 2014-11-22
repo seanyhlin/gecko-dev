@@ -44,3 +44,4 @@ interface nsIPresentationDeviceManager : nsISupports
    */
   nsIArray getAvailableDevices();
 };
+

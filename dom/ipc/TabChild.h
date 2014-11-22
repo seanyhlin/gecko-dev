@@ -393,6 +393,20 @@ public:
     AllocPColorPickerChild(const nsString& title, const nsString& initialColor) MOZ_OVERRIDE;
     virtual bool DeallocPColorPickerChild(PColorPickerChild* actor) MOZ_OVERRIDE;
 
+    virtual PNavigatorPresentationChild*
+    AllocPNavigatorPresentationChild() MOZ_OVERRIDE;
+    virtual bool
+    DeallocPNavigatorPresentationChild(PNavigatorPresentationChild* actor) MOZ_OVERRIDE;
+
+    virtual PPresentationSessionChild*
+    AllocPPresentationSessionChild(const nsCString& aURL,
+                                   const nsCString& aSessionId,
+                                   const nsCString& aDeviceId) MOZ_OVERRIDE;
+    virtual bool
+    DeallocPPresentationSessionChild(PPresentationSessionChild* actor) MOZ_OVERRIDE;
+
+
+
     virtual PContentPermissionRequestChild*
     AllocPContentPermissionRequestChild(const InfallibleTArray<PermissionRequest>& aRequests,
                                         const IPC::Principal& aPrincipal) MOZ_OVERRIDE;

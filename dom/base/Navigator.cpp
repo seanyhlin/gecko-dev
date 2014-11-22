@@ -36,6 +36,7 @@
 #include "mozilla/dom/power/PowerManagerService.h"
 #include "mozilla/dom/CellBroadcast.h"
 #include "mozilla/dom/MobileMessageManager.h"
+#include "mozilla/dom/NavigatorPresentation.h"
 #include "mozilla/dom/ServiceWorkerContainer.h"
 #include "mozilla/dom/Telephony.h"
 #include "mozilla/dom/Voicemail.h"
@@ -194,6 +195,7 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(Navigator)
 
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWindow)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mCachedResolveResults)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mNavigatorPresentation)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE_SCRIPT_OBJECTS
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
@@ -307,6 +309,11 @@ Navigator::Invalidate()
   }
 
   mServiceWorkerContainer = nullptr;
+
+  if (mNavigatorPresentation) {
+    mNavigatorPresentation->Shutdown();
+    mNavigatorPresentation = nullptr;
+  }
 }
 
 //*****************************************************************************
@@ -2531,6 +2538,17 @@ Navigator::GetUserAgent(nsPIDOMWindow* aWindow, nsIURI* aURI,
   }
 
   return siteSpecificUA->GetUserAgentForURIAndWindow(aURI, aWindow, aUserAgent);
+}
+
+already_AddRefed<NavigatorPresentation>
+Navigator::Presentation()
+{
+  if (!mNavigatorPresentation) {
+    mNavigatorPresentation = new NavigatorPresentation(mWindow);
+    mNavigatorPresentation->Init();
+  }
+  nsRefPtr<NavigatorPresentation> naviPresentation = mNavigatorPresentation;
+  return naviPresentation.forget();
 }
 
 } // namespace dom

@@ -39,3 +39,4 @@ private:
 } // namespace mozilla
 
 #endif /* mozilla_dom_PresentationSessionRequest_h__ */
+

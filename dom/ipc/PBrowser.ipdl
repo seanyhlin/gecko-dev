@@ -13,6 +13,8 @@ include protocol PDocumentRenderer;
 include protocol PContentPermissionRequest;
 include protocol PFilePicker;
 include protocol PIndexedDBPermissionRequest;
+include protocol PNavigatorPresentation;
+include protocol PPresentationSession;
 include protocol PRenderFrame;
 include protocol PPluginWidget;
 include DOMTypes;
@@ -78,6 +80,8 @@ prio(normal upto urgent) intr protocol PBrowser
     manages PContentPermissionRequest;
     manages PFilePicker;
     manages PIndexedDBPermissionRequest;
+    manages PNavigatorPresentation;
+    manages PPresentationSession;
     manages PRenderFrame;
     manages PPluginWidget;
 
@@ -322,6 +326,16 @@ parent:
      *       provided.
      */
     PIndexedDBPermissionRequest(Principal principal);
+
+     /**
+     */
+    PNavigatorPresentation();
+
+    /**
+     */
+    PPresentationSession(nsCString aURL,
+                        nsCString aSessionId,
+                        nsCString aDeviceId);
 
     /**
      * window.open from inside <iframe mozbrowser> is special.  When the child
