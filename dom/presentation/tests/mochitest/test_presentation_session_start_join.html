@@ -1,0 +1,115 @@
+<!--
+  Any copyright is dedicated to the Public Domain.
+  http://creativecommons.org/publicdomain/zero/1.0/
+-->
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Test for the Presentation API </title>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css" />
+  <!--script type="text/javascript" src="manifest.js"></script-->
+</head>
+<body>
+<script class="testbody" type="text/javascript">
+
+function testEnd() {
+  SimpleTest.finish();
+}
+
+var session = null;
+var isConnected = false;
+
+function setSession(theSession) {
+  session = theSession;
+  isConnected = false;
+  session.onstatechange = function() {
+    switch (session.state) {
+      case 'connected':
+        ok(!isConnected, " From disconnected to connected !");
+        isConnected = true;
+        break;
+      case 'disconnected':
+        ok(isConnected, " Should be connected first ");
+        session.onstatechange = null;
+        next();
+        break;
+    }
+  };
+}
+
+function testJoinSession() {
+  var presentation = navigator.presentation;
+  var URL = "http://example.org/presentation.html";
+  var SessionId = "testJoinSessionSId";
+  presentation.joinSession(URL, SessionId).then(
+    function onResolved(existingSession) {
+      ok(true, "JoinSession resolved.");
+      setSession(existingSession);
+    },
+    function onRejected() {
+      ok(false, "JoinSession rejected.");
+      testEnd();
+    }
+  );
+}
+
+function testStartSessionWithId() {
+  var presentation = navigator.presentation;
+  var URL = "http://example.org/presentation.html";
+  var SessionId = "testLastSessionId1234";
+  presentation.startSession(URL, SessionId).then(
+    function onResolved(newSession) {
+      ok(newSession.id == SessionId, "SessionId should be testLastSessionId1234");
+      ok(true, "StartSession with last SessionId resolved.");
+      setSession(newSession);
+    },
+    function onRejected() {
+      ok(false, "StartSession with last SessionId rejected.");
+      testEnd();
+    }
+  );
+}
+
+function testStartSession() {
+  var presentation = navigator.presentation;
+  var URL = "http://example.org/presentation.html";
+  var SessionId = null;
+  presentation.startSession(URL, SessionId).then(
+    function onResolved(newSession) {
+      ok(true, "StartSession promise resolved.");
+      setSession(newSession);
+    },
+    function onRejected() {
+      ok(false, "StartSession promise rejected.");
+      testEnd();
+    }
+  );
+}
+
+var tests = [testStartSession, testStartSessionWithId, testJoinSession, testEnd];
+
+function next() {
+  var test = tests.shift();
+  if (test) {
+    try {
+      test();
+    } catch(e) {
+      console.error("exception", String(e), e, e.stack);
+    }
+  } else {
+    testEnd();
+  }
+}
+
+SimpleTest.waitForExplicitFinish();
+SpecialPowers.pushPrefEnv({"set": [["dom.presentation.enabled", true],
+                                  ["dom.ignore_webidl_scope_checks", true],
+                                  ["dom.presentation.test.enabled", true],
+                                  ["dom.presentation.test.stage", 1]]},
+  next
+);
+</script>
+</pre>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!--
+  Any copyright is dedicated to the Public Domain.
+  http://creativecommons.org/publicdomain/zero/1.0/
+-->
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Test for the Presentation API </title>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css" />
+  <!--script type="text/javascript" src="manifest.js"></script-->
+</head>
+<body>
+<script class="testbody" type="text/javascript">
+
+function testEnd() {
+  SimpleTest.finish();
+}
+
+function testAvailability() {
+  var presentation = navigator.presentation;
+  var available = presentation.available;
+  ok(!available, " There should be no device ! ");
+  presentation.onavailablechange = function(e) {
+    ok(e.available, " Devices available ! ");
+    ok(presentation.available == e.available,
+     " Presentation.available should be same as e.available ");
+    testEnd();
+  }
+}
+
+SimpleTest.waitForExplicitFinish();
+SpecialPowers.pushPrefEnv({"set": [["dom.presentation.enabled", true],
+                                  ["dom.ignore_webidl_scope_checks", true],
+                                  ["dom.presentation.test.enabled", true],
+                                  ["dom.presentation.test.stage", 0]]},
+  testAvailability
+);
+</script>
+</pre>
+</body>
+</html>

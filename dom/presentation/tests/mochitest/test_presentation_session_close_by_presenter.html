@@ -1,0 +1,101 @@
+<!--
+  Any copyright is dedicated to the Public Domain.
+  http://creativecommons.org/publicdomain/zero/1.0/
+-->
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Test for the Presentation API </title>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css" />
+  <!--script type="text/javascript" src="manifest.js"></script-->
+</head>
+<body>
+<script class="testbody" type="text/javascript">
+
+var session = null;
+var channel = null;
+var isClose = false;
+
+function testEnd() {
+  SimpleTest.finish();
+}
+
+function setChannelPassiveClose(theChannel) {
+  channel = theChannel;
+  channel.onmessage = function(msg) {
+    ok(msg.data == "HelloBack", "Receiving message(HelloBack) from channel !");
+  };
+  channel.onopen = function() {
+    ok(true, "PreSocketChannel OPENED");
+    channel.send("Hello");
+  };
+  channel.onerror = function() {
+    ok(false, "Not notifying error for now");
+  };
+  channel.onclose = function() {
+    ok(true, "PreSocketChannel CLOSED by remote notification");
+    isClose = true;
+    channel = null;
+    next();
+  };
+}
+
+function setSession(theSession) {
+  session = theSession;
+  session.onstatechange = function() {
+    switch (session.state) {
+      case 'connected':
+        ok(session.channel, " Session connected, PresentationSockChannel exists !");
+        setChannelPassiveClose(session.channel);
+        break;
+      case 'disconnected':
+        ok(!isClose, " Session disconnected before  channel is closed!");
+        session.onstatechange = null;
+        break;
+    }
+  };
+}
+
+function testStartSession() {
+  var presentation = navigator.presentation;
+  var URL = "http://example.org/presentation2.html";
+  var SessionId = null;
+  presentation.startSession(URL, SessionId).then(
+    function onResolved(newSession) {
+      ok(true, "StartSession promise resolved.");
+      setSession(newSession);
+    },
+    function onRejected() {
+      ok(false, "StartSession promise rejected.");
+      testEnd();
+    }
+  );
+}
+
+var tests = [testStartSession, testEnd];
+
+function next() {
+  var test = tests.shift();
+  if (test) {
+    try {
+      test();
+    } catch(e) {
+      console.error("exception", String(e), e, e.stack);
+    }
+  } else {
+    dump("\033[1;34m no test exists \033[m\n");
+  }
+}
+
+SimpleTest.waitForExplicitFinish();
+SpecialPowers.pushPrefEnv({"set": [["dom.presentation.enabled", true],
+                                  ["dom.ignore_webidl_scope_checks", true],
+                                  ["dom.presentation.test.enabled", true],
+                                  ["dom.presentation.test.stage", 3]]},
+  next
+);
+</script>
+</pre>
+</body>
+</html>
