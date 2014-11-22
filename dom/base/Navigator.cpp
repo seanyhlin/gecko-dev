@@ -37,6 +37,7 @@
 #include "mozilla/dom/power/PowerManagerService.h"
 #include "mozilla/dom/CellBroadcast.h"
 #include "mozilla/dom/MobileMessageManager.h"
+#include "mozilla/dom/NavigatorPresentation.h"
 #include "mozilla/dom/ServiceWorkerContainer.h"
 #include "mozilla/dom/Telephony.h"
 #include "mozilla/dom/Voicemail.h"
@@ -193,9 +194,9 @@ NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(Navigator)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mDeviceStorageStores)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mTimeManager)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mServiceWorkerContainer)
-
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mWindow)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mCachedResolveResults)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mPresentation)
   NS_IMPL_CYCLE_COLLECTION_TRAVERSE_SCRIPT_OBJECTS
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
@@ -306,6 +307,10 @@ Navigator::Invalidate()
 
   if (mTimeManager) {
     mTimeManager = nullptr;
+  }
+
+  if (mPresentation) {
+    mPresentation = nullptr;
   }
 
   mServiceWorkerContainer = nullptr;
@@ -2633,6 +2638,20 @@ Navigator::RequestMediaKeySystemAccess(const nsAString& aKeySystem,
   return p.forget();
 }
 #endif
+
+NavigatorPresentation*
+Navigator::GetPresentation(ErrorResult& aRv)
+{
+  if (!mPresentation) {
+    if (!mWindow) {
+      aRv.Throw(NS_ERROR_UNEXPECTED);
+      return nullptr;
+    }
+    mPresentation = new NavigatorPresentation(mWindow);
+  }
+
+  return mPresentation;
+}
 
 } // namespace dom
 } // namespace mozilla
