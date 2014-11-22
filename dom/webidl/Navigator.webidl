@@ -393,6 +393,12 @@ partial interface Navigator {
                      optional (ArrayBufferView or Blob or DOMString or FormData)? data = null);
 };
 
+// For Presentation API
+partial interface Navigator {
+  [Pref="dom.presentation.enabled", AvailableIn="PrivilegedApps"]
+  readonly attribute NavigatorPresentation presentation;
+};
+
 partial interface Navigator {
   [Pref="dom.tv.enabled", CheckPermissions="tv", Func="Navigator::HasTVSupport"]
   readonly attribute TVManager? tv;

@@ -300,6 +300,7 @@ WEBIDL_FILES = [
     'MutationObserver.webidl',
     'NamedNodeMap.webidl',
     'NativeOSFileInternals.webidl',
+    'NavigatorPresentation.webidl',
     'NetDashboard.webidl',
     'NetworkInformation.webidl',
     'NetworkOptions.webidl',
@@ -332,6 +333,8 @@ WEBIDL_FILES = [
     'Position.webidl',
     'PositionError.webidl',
     'PresentationDeviceInfoManager.webidl',
+    'PresentationSession.webidl',
+    'PresentationSocketChannel.webidl',
     'ProcessingInstruction.webidl',
     'ProfileTimelineMarker.webidl',
     'Promise.webidl',
@@ -677,6 +680,7 @@ if CONFIG['MOZ_B2G_FM']:
 
 GENERATED_EVENTS_WEBIDL_FILES = [
     'AutocompleteErrorEvent.webidl',
+    'AvailableChangeEvent.webidl',
     'BlobEvent.webidl',
     'CallEvent.webidl',
     'CallGroupErrorEvent.webidl',
