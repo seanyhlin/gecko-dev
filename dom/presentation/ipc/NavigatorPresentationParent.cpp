@@ -47,15 +47,15 @@ void
 NavigatorPresentationParent::Notify(const PresentationEvent& aEvent)
 {
   if (aEvent.eventType == EPresentationEvent::DeviceAvailableChanged) {
-    bool ret = SendNotifyDeviceAvailableStatus(aEvent.available);
+    DebugOnly<bool> ret = SendNotifyDeviceAvailableStatus(aEvent.available);
     NS_WARN_IF_FALSE(ret, "SendNotifyDeviceAvailableStatus failed !!");
   } else if (aEvent.eventType == EPresentationEvent::DeviceSelected) {
-    bool ret = SendNotifyDeviceSeletedStatus(aEvent.deviceInfo.mOrigin,
-                                             aEvent.deviceInfo.mURL,
-                                             aEvent.deviceInfo.mSessionId,
-                                             aEvent.deviceInfo.mId,
-                                             aEvent.deviceInfo.mName,
-                                             aEvent.deviceInfo.mType);
+    DebugOnly<bool> ret = SendNotifyDeviceSeletedStatus(aEvent.deviceInfo.mOrigin,
+                                                        aEvent.deviceInfo.mURL,
+                                                        aEvent.deviceInfo.mSessionId,
+                                                        aEvent.deviceInfo.mId,
+                                                        aEvent.deviceInfo.mName,
+                                                        aEvent.deviceInfo.mType);
     NS_WARN_IF_FALSE(ret, "SendNotifyDeviceSeletedStatus failed !!");
   }
 }

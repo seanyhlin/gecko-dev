@@ -183,18 +183,12 @@ NavigatorPresentation::AnswerPromise(const nsACString& aOrigin,
 void
 NavigatorPresentation::CreateIPresentationManager()
 {
-  if (!mPresentationManager)
-  {
-    if (XRE_GetProcessType() != GeckoProcessType_Default) {
-      mPresentationManager =
-          static_cast<IPresentationManager*>(new NavigatorPresentationChild());
-    }
-    else {
-      mPresentationManager = GetIPresentationManager();
-    }
-  }
   if (!mPresentationManager) {
-    NS_WARNING("Fail to create mPresentationManager !");
+    if (XRE_GetProcessType() != GeckoProcessType_Default) {
+      mPresentationManager = static_cast<IPresentationManager*>(new NavigatorPresentationChild());
+    } else {
+      mPresentationManager = static_cast<IPresentationManager*>(PresentationManager::GetInstance());
+    }
   }
 }
 

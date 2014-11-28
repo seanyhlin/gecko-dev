@@ -15,17 +15,17 @@ enum PresentationBinaryType { "blob", "arraybuffer" };
 [Pref="dom.presentation.enabled", AvailableIn="PrivilegedApps"]
 interface PresentationSocketChannel : EventTarget {
   [Throws]
-  void send (DOMString data);
+  void send(DOMString data);
   [Throws]
-  void send (Blob data);
+  void send(Blob data);
   [Throws]
-  void send (ArrayBuffer data);
+  void send(ArrayBuffer data);
   [Throws]
-  void send (ArrayBufferView data);
+  void send(ArrayBufferView data);
 
-  void close ();
+  void close();
 
-  attribute PresentationBinaryType binaryType;
+           attribute PresentationBinaryType binaryType;
   readonly attribute unsigned long bufferedAmount;
 
   const unsigned short CONNECTING = 0;
@@ -34,8 +34,8 @@ interface PresentationSocketChannel : EventTarget {
   const unsigned short CLOSED = 3;
   readonly attribute unsigned short readyState;
 
-  attribute EventHandler onmessage;
-  attribute EventHandler onopen;
-  attribute EventHandler onerror;
-  attribute EventHandler onclose;
+           attribute EventHandler onmessage;
+           attribute EventHandler onopen;
+           attribute EventHandler onerror;
+           attribute EventHandler onclose;
 };

@@ -7,7 +7,6 @@
 #define mozilla_dom_PresentationSocketChannelInternal_h__
 
 #include "nsCycleCollectionParticipant.h"
-#include "nsISupports.h"
 #include "nsIPresentationSessionTransport.h"
 #include "PresentationCommon.h"
 
@@ -16,8 +15,7 @@ BEGIN_PRESENTATION_NAMESPACE
 class PresentationSessionInternal;
 
 class PresentationSocketChannelInternal MOZ_FINAL
-  : public nsISupports
-  , public nsIPresentationSessionTransportListener
+  : public nsIPresentationSessionTransportListener
 {
 public:
   class NotifyCloseRunnable MOZ_FINAL : public nsRunnable

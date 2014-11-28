@@ -277,10 +277,13 @@ PresentationManager::Observe(nsISupports* aSubject,
 {
   nsresult rv = NS_OK;
   if (!strcmp(aTopic, PRESENTATION_DEVICE_CHANGE_TOPIC)) {
+    // EqualsLiteral
     bool available = !NS_strcmp(aData,
         MOZ_UTF16("dom.presentation.available-devices"))? true : false;
     NotifyDeviceAvailable(available);
   } else if (!strcmp(aTopic, PRESENTATION_SESSION_REQUEST_TOPIC)) {
+    // do_QueryInterface
+    // rv = HandleSessionRequest(aSubject)
     nsRefPtr<PresentationSessionRequest> psRequest =
       static_cast<PresentationSessionRequest*>(aSubject);
     rv = HandleCreateSessionRequest(psRequest);
@@ -417,7 +420,12 @@ PresentationManager::FindBestMatchSessionDevice(const nsACString& aURL,
 
 nsresult
 PresentationManager::HandleCreateSessionRequest(nsRefPtr<PresentationSessionRequest> &aReq)
+//PresentationManager::HandleCreateSessionRequest(nsISupport* aRequest)
 {
+  // nsCOMPtr<nsIPresentationSessionRequest> req = do_QueryInterface(aRequest);
+  // if (!req) {
+  //   return NS_ERROR_FAILURE;
+  // }
   nsAutoString url;
   nsAutoString controllerSessionId;
   nsCOMPtr<nsIPresentationSessionTransport> psTransport;
@@ -425,20 +433,21 @@ PresentationManager::HandleCreateSessionRequest(nsRefPtr<PresentationSessionRequ
 
   aReq->GetUrl(url);
   aReq->GetPresentationId(controllerSessionId);
-  aReq->GetSessionTransport(getter_AddRefs(psTransport));
+  aReq->GetSessionTransport(getter_AddRefs(psTransport)); // unused
   aReq->GetDevice(getter_AddRefs(pDevice));
-  NS_ENSURE_TRUE(psTransport, NS_ERROR_FAILURE);
+  NS_ENSURE_TRUE(psTransport, NS_ERROR_FAILURE); // NS_ENSURE_TRUE, deprecated
   NS_ENSURE_TRUE(pDevice, NS_ERROR_FAILURE);
 
   // The contollerSessionID may be a new generated one or a lastSessionID which
   // stands for an existing presentation presenting on presenter now.
+  // XXX: string usage
   nsAutoCString requestURL(NS_ConvertUTF16toUTF8(url).get());
   nsAutoCString sessionId(NS_ConvertUTF16toUTF8(controllerSessionId).get());
   nsAutoCString sessionKey;
   sessionKey = requestURL + sessionId;
 
   SessionInternalArray* arr = nullptr;
-  bool isNewSession = false;
+//  bool isNewSession = false;
   if (!mSessionInternalStore.Contains(sessionKey)) {
     // No target presenting session on presenter !
     arr = new SessionInternalArray();
@@ -450,7 +459,7 @@ PresentationManager::HandleCreateSessionRequest(nsRefPtr<PresentationSessionRequ
 
     psi->SetupPSIInfo(NS_LITERAL_CSTRING("presenter"), requestURL, sessionId, pDevice);
     arr->AppendElement(psi);
-    isNewSession = true;
+//    isNewSession = true;
   } else {
     // The request session exists on current presenter.
   }

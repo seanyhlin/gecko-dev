@@ -8,15 +8,6 @@
 
 BEGIN_PRESENTATION_NAMESPACE
 
-static IPresentationManager*
-GetIPresentationManager()
-{
-  IPresentationManager* IPMgr =
-      static_cast<IPresentationManager*>(PresentationManager::GetInstance());
-  MOZ_ASSERT(IPMgr, "IPresentationManager should exist !!!");
-  return IPMgr;
-}
-
 static IManageSessionInternal*
 GetIManageSessionInternal()
 {

@@ -80,7 +80,7 @@ MOZ_IMPLICIT PresentationSessionParent::~PresentationSessionParent()
 void
 PresentationSessionParent::NotifyStateChanged(PresentationSessionState aState)
 {
-  bool ret = false;
+  DebugOnly<bool> ret = false;
   if (aState == PresentationSessionState::Connected) {
     ret = SendUpdateConnectionStatus(NS_LITERAL_CSTRING("connected"));
   } else if (aState == PresentationSessionState::Disconnected) {
@@ -94,14 +94,14 @@ PresentationSessionParent::NotifyStateChanged(PresentationSessionState aState)
 void
 PresentationSessionParent::NotifyChannelStatus(EChannelState aChannelState)
 {
-  bool ret = SendUpdateChannelStatus((uint32_t)aChannelState);
+  DebugOnly<bool> ret = SendUpdateChannelStatus((uint32_t)aChannelState);
   NS_WARN_IF_FALSE(ret, "SendUpdateChannelStatus to Child failed !!");
 }
 
 void
 PresentationSessionParent::NotifyMessageRecieved(const nsACString& aMsg, bool aIsBinary)
 {
-  bool ret = SendMessage(nsCString(aMsg), aIsBinary);
+  DebugOnly<bool> ret = SendMessage(nsCString(aMsg), aIsBinary);
   NS_WARN_IF_FALSE(ret, "SendMessage to Child failed !!");
 }
 

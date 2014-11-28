@@ -14,8 +14,8 @@ enum PresentationSessionState { "connected", "disconnected" /*, "resumed" */ };
 
 [Pref="dom.presentation.enabled", AvailableIn="PrivilegedApps"]
 interface PresentationSession : EventTarget {
-  readonly attribute PresentationSessionState state;
-  attribute EventHandler onstatechange;
   readonly attribute DOMString? id;
+  readonly attribute PresentationSessionState state;
+           attribute EventHandler onstatechange;
   readonly attribute PresentationSocketChannel channel;
 };

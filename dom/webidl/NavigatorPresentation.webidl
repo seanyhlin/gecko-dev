@@ -14,13 +14,11 @@
 interface NavigatorPresentation : EventTarget {
 
   [Throws]
-  Promise<PresentationSession> startSession(DOMString url, DOMString?
-sessionId);
+  Promise<PresentationSession> startSession(DOMString url, DOMString? sessionId);
   [Throws]
-  Promise<PresentationSession> joinSession(DOMString url, DOMString?
-sessionId);
+  Promise<PresentationSession> joinSession(DOMString url, DOMString? sessionId);
 
-  attribute EventHandler onavailablechange;
+           attribute EventHandler onavailablechange;
   readonly attribute PresentationSession? session;
 
   readonly attribute boolean available;
