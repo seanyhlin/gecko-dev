@@ -4,8 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_dom_PresentationSession_h
-#define mozilla_dom_PresentationSession_h
+#ifndef mozilla_dom_presentation_PresentationSession_h
+#define mozilla_dom_presentation_PresentationSession_h
 
 #include "mozilla/Attributes.h"
 #include "mozilla/DOMEventTargetHelper.h"
@@ -18,56 +18,43 @@ struct JSContext;
 
 namespace mozilla {
 namespace dom {
-
 class StringOrBlobOrArrayBufferOrArrayBufferView;
+
+namespace presentation {
 
 class PresentationSession MOZ_FINAL : public DOMEventTargetHelper
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(PresentationSession,
-                                           DOMEventTargetHelper)
 
   virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE;
 
-  PresentationSession(nsPIDOMWindow* aWindow);
+  explicit PresentationSession(nsPIDOMWindow* aWindow, const nsAString& aId);
 
   // WebIDL (public APIs)
 
   void GetId(nsAString& aId) const;
 
-  uint32_t BufferedAmount() const;
+  PresentationSessionState State() const;
 
-  PresentationReadyState ReadyState() const;
-
-  PresentationSessionState SessionState() const;
-
-  PresentationBinaryType BinaryType() const;
-
-  void SetBinaryType(PresentationBinaryType aBinaryType);
-
-  IMPL_EVENT_HANDLER(message);
-  IMPL_EVENT_HANDLER(open);
-  IMPL_EVENT_HANDLER(close);
-  IMPL_EVENT_HANDLER(error);
-  IMPL_EVENT_HANDLER(sessionstatechange);
+  IMPL_EVENT_HANDLER(statechange);
 
   void Send(const StringOrBlobOrArrayBufferOrArrayBufferView& data,
             ErrorResult& aRv);
 
-  void Close(ErrorResult& aRv);
+  IMPL_EVENT_HANDLER(message);
+
+  void Disconnect(ErrorResult& aRv);
 
 private:
   virtual ~PresentationSession();
 
   nsString mId;
-  uint32_t mBufferedAmount;
-  PresentationReadyState mReadyState;
-  PresentationSessionState mSessionState;
-  PresentationBinaryType mBinaryType;
+  PresentationSessionState mState;
 };
 
+} // namespace presentation
 } // namespace dom
 } // namespace mozilla
 
-#endif // mozilla_dom_PresentationSession_h
+#endif // mozilla_dom_presentation_PresentationSession_h

@@ -4,14 +4,18 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_dom_NavigatorPresentation_h
-#define mozilla_dom_NavigatorPresentation_h
+#ifndef mozilla_dom_presentation_NavigatorPresentation_h
+#define mozilla_dom_presentation_NavigatorPresentation_h
 
 #include "mozilla/Attributes.h"
 #include "mozilla/DOMEventTargetHelper.h"
 #include "mozilla/ErrorResult.h"
 #include "nsCycleCollectionParticipant.h"
+#include "nsIObserver.h"
+#include "nsIPresentationServiceCallback.h"
+#include "nsServiceManagerUtils.h"
 #include "nsWrapperCache.h"
+#include "PresentationSession.h"
 
 struct JSContext;
 
@@ -19,14 +23,17 @@ namespace mozilla {
 namespace dom {
 
 class Promise;
-class PresentationSession;
+
+namespace presentation {
 
 class NavigatorPresentation MOZ_FINAL : public DOMEventTargetHelper
+                                      , public nsIPresentationListener
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(NavigatorPresentation,
                                            DOMEventTargetHelper)
+  NS_DECL_NSIPRESENTATIONLISTENER
 
   virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE;
 
@@ -37,14 +44,16 @@ public:
   // WebIDL (public APIs)
 
   already_AddRefed<Promise> StartSession(const nsAString& aUrl,
-                                         const nsAString& aSessionId,
+                                         const Optional<nsAString>& aId,
                                          ErrorResult& aRv);
 
   already_AddRefed<Promise> JoinSession(const nsAString& aUrl,
-                                        const nsAString& aSessionId,
+                                        const nsAString& aId,
                                         ErrorResult& aRv);
 
   already_AddRefed<PresentationSession> GetSession() const;
+  
+  IMPL_EVENT_HANDLER(sessionready);
 
   bool Available() const;
 
@@ -52,11 +61,36 @@ public:
 
 private:
   virtual ~NavigatorPresentation();
+  bool Init();
 
   bool mAvailable;
+  nsRefPtr<PresentationSession> mSession;
 };
 
+class StartSessionCallback : public nsIPresentationServiceCallback
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIPRESENTATIONSERVICECALLBACK
+
+  StartSessionCallback(NavigatorPresentation* aNavigatorPresentation,
+                       const nsAString& aUrl,
+                       const nsAString& aId,
+                       const nsAString& aOrigin,
+                       Promise* aPromise,
+                       nsPIDOMWindow* aWindow);
+
+private:
+  virtual ~StartSessionCallback();
+
+  nsRefPtr<NavigatorPresentation> mNavigatorPresentation;
+  nsString mId;
+  nsRefPtr<Promise> mPromise;
+  nsCOMPtr<nsPIDOMWindow> mWindow;
+};
+
+} // namdspace presentation
 } // namespace dom
 } // namespace mozilla
 
-#endif // mozilla_dom_NavigatorPresentation_h
+#endif // mozilla_dom_presentation_NavigatorPresentation_h

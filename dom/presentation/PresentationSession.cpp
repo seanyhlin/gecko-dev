@@ -4,31 +4,35 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "PresentationService.h"
 #include "PresentationSession.h"
 #include "mozilla/dom/PresentationSessionBinding.h"
 #include "mozilla/dom/UnionTypes.h"
 
-namespace mozilla {
-namespace dom {
+using namespace mozilla;
+using namespace mozilla::dom;
+using namespace mozilla::dom::presentation;
 
 NS_IMPL_ADDREF_INHERITED(PresentationSession, DOMEventTargetHelper)
 NS_IMPL_RELEASE_INHERITED(PresentationSession, DOMEventTargetHelper)
 
-// QueryInterface implementation for PresentationSession
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(PresentationSession)
 NS_INTERFACE_MAP_END_INHERITING(DOMEventTargetHelper)
 
-PresentationSession::PresentationSession(nsPIDOMWindow* aWindow)
+PresentationSession::PresentationSession(nsPIDOMWindow* aWindow,
+                                         const nsAString& aId)
   : DOMEventTargetHelper(aWindow)
-  , mBufferedAmount(0)
-  , mReadyState(PresentationReadyState::Closed)
-  , mSessionState(PresentationSessionState::Disconnected)
-  , mBinaryType(PresentationBinaryType::Blob)
+  , mId(aId)
+  , mState(PresentationSessionState::Disconnected)
 {
 }
 
 /* virtual */ PresentationSession::~PresentationSession()
 {
+  PresentationService* service = PresentationService::Get();
+  if (!service) {
+    return;
+  }
 }
 
 /* virtual */ JSObject*
@@ -43,34 +47,10 @@ PresentationSession::GetId(nsAString& aId) const
   aId = mId;
 }
 
-uint32_t
-PresentationSession::BufferedAmount() const
-{
-  return mBufferedAmount;
-}
-
 PresentationSessionState
-PresentationSession::SessionState() const
+PresentationSession::State() const
 {
-  return mSessionState;
-}
-
-PresentationReadyState
-PresentationSession::ReadyState() const
-{
-  return mReadyState;
-}
-
-PresentationBinaryType
-PresentationSession::BinaryType() const
-{
-  return mBinaryType;
-}
-
-void
-PresentationSession::SetBinaryType(PresentationBinaryType aBinaryType)
-{
-  mBinaryType = aBinaryType;
+  return mState;
 }
 
 void
@@ -82,10 +62,7 @@ PresentationSession::Send(
 }
 
 void
-PresentationSession::Close(ErrorResult& aRv)
+PresentationSession::Disconnect(ErrorResult& aRv)
 {
   // TODO Not implement yet.
 }
-
-} // namespace dom
-} // namespace mozilla

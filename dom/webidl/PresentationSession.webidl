@@ -13,47 +13,42 @@
 enum PresentationSessionState {
   "connected",
   "disconnected"
-  /*, "resumed" */
-};
-
-enum PresentationBinaryType {
-  "blob",
-  "arrayBuffer"
-};
-
-enum PresentationReadyState {
-  "connecting",
-  "open",
-  "closing",
-  "closed"
 };
 
 [Pref="dom.presentation.enabled", AvailableIn="PrivilegedApps"]
 interface PresentationSession : EventTarget {
-  readonly attribute DOMString? id;
+  /**
+   * Unique id for all existing sessions.
+   */
+  readonly attribute DOMString id;
 
-  readonly attribute unsigned long bufferedAmount;
+  /**
+   * @value connected: Use send() to send messages and close() to terminate the
+   *                   session. Listen |onmessage| to receive messages.
+   * @value disconnected: No operation is allowed at this state.
+   */
+  readonly attribute PresentationSessionState state;
 
-  readonly attribute PresentationReadyState readyState;
+  /**
+   * It is called when session state changes. New value is dispatched with
+   * the event.
+   */
+           attribute EventHandler onstatechange;
 
-  readonly attribute PresentationSessionState sessionState;
-
-           attribute PresentationBinaryType binaryType;
-
-           attribute EventHandler onsessionstatechange;
-
-           attribute EventHandler onmessage;
-
-           attribute EventHandler onopen;
-
-           attribute EventHandler onerror;
-
-           attribute EventHandler onclose;
-
+  /**
+   * This function is useful only if |state == 'connected'|.
+   */
   [Throws]
   void send((DOMString or Blob or ArrayBuffer or ArrayBufferView) data);
 
+  /**
+   * This function is useful only if |state == 'connected'|.
+   */
   [Throws]
-  void close();
+   void disconnect();
 
+  /**
+   * It is called when receiving messages. 
+   */
+           attribute EventHandler onmessage;
 };

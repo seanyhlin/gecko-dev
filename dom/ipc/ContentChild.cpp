@@ -34,6 +34,9 @@
 #include "mozilla/dom/asmjscache/AsmJSCache.h"
 #include "mozilla/dom/asmjscache/PAsmJSCacheEntryChild.h"
 #include "mozilla/dom/nsIContentChild.h"
+#include "mozilla/dom/presentation/PresentationChild.h"
+#include "mozilla/dom/presentation/PresentationIPCService.h"
+#include "mozilla/dom/presentation/PPresentationChild.h"
 #include "mozilla/hal_sandbox/PHalChild.h"
 #include "mozilla/ipc/BackgroundChild.h"
 #include "mozilla/ipc/FileDescriptorSetChild.h"
@@ -179,6 +182,7 @@ using namespace mozilla::dom::devicestorage;
 using namespace mozilla::dom::ipc;
 using namespace mozilla::dom::mobileconnection;
 using namespace mozilla::dom::mobilemessage;
+using namespace mozilla::dom::presentation;
 using namespace mozilla::dom::telephony;
 using namespace mozilla::dom::voicemail;
 using namespace mozilla::embedding;
@@ -1333,6 +1337,31 @@ ContentChild::SendPBlobConstructor(PBlobChild* aActor,
 {
     return PContentChild::SendPBlobConstructor(aActor, aParams);
 }
+
+PPresentationChild*
+ContentChild::AllocPPresentationChild()
+{
+    NS_NOTREACHED("We should never be manually allocating PPresentationChild actors");
+    return nullptr;
+}
+
+bool
+ContentChild::DeallocPPresentationChild(PPresentationChild* aActor)
+{
+    delete aActor;
+    return true;
+}
+
+/*PPresentationChild*
+ContentChild::SendPPresentationConstructor(PresentationIPCService* aActor)
+{
+   aActor = PContentChild::SendPPresentationConstructor(aActor);
+   if (aActor) {
+       aActor->AddRef();
+   }
+
+   return aActor;
+}*/
 
 PCrashReporterChild*
 ContentChild::AllocPCrashReporterChild(const mozilla::dom::NativeThreadId& id,

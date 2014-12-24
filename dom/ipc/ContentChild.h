@@ -51,6 +51,10 @@ class PStorageChild;
 class ClonedMessageData;
 class TabChild;
 
+namespace presentation {
+class PresentationIPCService;
+} // namespace presentation
+
 class ContentChild : public PContentChild
                    , public nsIContentChild
 {
@@ -261,6 +265,10 @@ public:
 
     virtual PFMRadioChild* AllocPFMRadioChild() MOZ_OVERRIDE;
     virtual bool DeallocPFMRadioChild(PFMRadioChild* aActor) MOZ_OVERRIDE;
+
+    virtual PPresentationChild* AllocPPresentationChild() MOZ_OVERRIDE;
+    virtual bool DeallocPPresentationChild(PPresentationChild* aActor) MOZ_OVERRIDE;
+//    PPresentationChild* SendPPresentationConstructor(PresentationIPCService* aActor);
 
     virtual PAsmJSCacheEntryChild* AllocPAsmJSCacheEntryChild(
                                  const asmjscache::OpenMode& aOpenMode,

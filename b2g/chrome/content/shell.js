@@ -698,6 +698,13 @@ Services.obs.addObserver(function(subject, topic, data) {
   shell.sendCustomEvent('mozmemorypressure');
 }, 'memory-pressure', false);
 
+Services.obs.addObserver(function(subject, topic, data) {
+  shell.sendChromeEvent({
+    type: "presentation-launch-receiver",
+    value: data
+  });
+}, 'presentation-launch-receiver', false);
+
 var CustomEventManager = {
   init: function custevt_init() {
     window.addEventListener("ContentStart", (function(evt) {
@@ -733,6 +740,11 @@ var CustomEventManager = {
         break;
       case 'do-command':
         DoCommandHelper.handleEvent(detail.cmd);
+      case 'presentation-receiver-launched':
+        Services.obs.notifyObservers(null, 'presentation-receiver-launched', detail.frame);
+        detail.frame.addEventListener('DOMContentLoaded', function ready(){
+          Services.obs.notifyObservers(null, 'presentation-receiver-ready', null);
+        });
         break;
     }
   }

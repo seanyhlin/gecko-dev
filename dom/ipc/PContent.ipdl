@@ -33,6 +33,7 @@ include protocol PSharedBufferManager;
 include protocol PSms;
 include protocol PSpeechSynthesis;
 include protocol PStorage;
+include protocol PPresentation;
 include protocol PTelephony;
 include protocol PTestShell;
 include protocol PVoicemail;
@@ -340,6 +341,26 @@ union OptionalContentId
   void_t;
 };
 
+struct PresentationStartSessionParams
+{
+  nsString url;
+  nsString sessionId;
+  nsString origin;
+};
+
+struct PresentationJoinSessionParams
+{
+  nsString url;
+  nsString sessionId;
+  nsString origin;
+};
+
+union PresentationParams
+{
+  PresentationStartSessionParams;
+  PresentationJoinSessionParams;
+};
+
 prio(normal upto urgent) intr protocol PContent
 {
     parent spawns PPluginModule;
@@ -372,6 +393,7 @@ prio(normal upto urgent) intr protocol PContent
     manages PSms;
     manages PSpeechSynthesis;
     manages PStorage;
+    manages PPresentation;
     manages PTelephony;
     manages PTestShell;
     manages PVoicemail;
@@ -643,6 +665,8 @@ parent:
     PSpeechSynthesis();
 
     PStorage();
+
+    PPresentation();
 
     PTelephony();
 

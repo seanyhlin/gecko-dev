@@ -1,0 +1,33 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsISupports.idl"
+
+[scriptable, uuid(12073206-0065-4b10-9488-a6eb9b23e65b)]
+interface nsIPresentationServiceCallback : nsISupports
+{
+  /**
+   * Called when the operation succeeds.
+   */
+  void notifySuccess();
+
+  /**
+   * Called when the operation fails.
+   */
+  void notifyError(in DOMString error);
+};
+
+[scriptable, uuid(0105f837-4279-4715-9d5b-2dc3f8b65353)]
+interface nsIPresentationListener : nsISupports
+{
+  /**
+   * Called when device availability changes.
+   */
+  void notifyAvailableChange(in bool available);
+
+  /**
+   * Called when session is ready.
+   */
+  void notifySessionReady(in DOMString id);
+};
