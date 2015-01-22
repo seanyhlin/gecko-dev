@@ -7,6 +7,8 @@
 #include "nsCRTGlue.h" // NS_strcmp
 #include "nsIAppsService.h"
 #include "nsIArray.h"
+#include "nsIDOMEventListener.h"
+#include "nsIDOMEventTarget.h"
 #include "nsIDOMTCPSocket.h"
 #include "nsIObserverService.h"
 #include "nsIPresentationControlChannel.h"
@@ -44,6 +46,59 @@ using namespace mozilla::dom::presentation;
 using namespace mozilla::services;
 
 StaticRefPtr<PresentationService> sPresentationService;
+
+
+////////////////////////////////////////////////////////////////////////////////
+// DOMContentLoadedListener
+
+class DOMContentLoadedListener MOZ_FINAL : public nsIDOMEventListener
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIDOMEVENTLISTENER
+ 
+  DOMContentLoadedListener(nsIDOMEventTarget* aTarget)
+    : mTarget(aTarget)
+    , mHandled(false)
+  {
+  }
+
+  ~DOMContentLoadedListener()
+  {
+    mTarget = nullptr;
+  }
+
+  void
+  OnTimeout();
+   
+private:
+  nsCOMPtr<nsIDOMEventTarget> mTarget;
+  bool mHandled;
+};
+
+NS_IMPL_ISUPPORTS(DOMContentLoadedListener, nsIDOMEventListener)
+
+NS_IMETHODIMP
+DOMContentLoadedListener::HandleEvent(nsIDOMEvent* aDOMEvent)
+{
+  MOZ_ASSERT(sPresentationService);
+
+  sPresentationService->OnReceiverReady();
+  mTarget->RemoveEventListener(NS_LITERAL_STRING("DOMContentLoaded"),
+                               static_cast<nsIDOMEventListener*>(this), false);
+  mHandled = true;
+  return NS_OK;
+}
+
+void
+DOMContentLoadedListener::OnTimeout()
+{
+  MOZ_ASSERT(sPresentationService);
+
+  if (!mHandled) {
+    sPresentationService->OnSessionFailure(NS_LITERAL_STRING("LoadTimeout"));
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // PresentationDeviceRequest
@@ -96,10 +151,7 @@ PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aD
   }
 
   sPresentationService->mRequester =
-    new SessionRequester(mId, aDevice, ctrlChannel, sPresentationService);
-
-//  SessionInfo* info = new SessionInfo(aDevice, transport);
-//  sPresentationService->AddSessionInfo(mId, info);
+    new SessionRequester(mId, aDevice, ctrlChannel, sPresentationService, mCallback);
 
   return NS_OK;
 }
@@ -115,6 +167,55 @@ PresentationService::PresentationDeviceRequest::Cancel()
 
 NS_IMPL_ISUPPORTS(PresentationService::PresentationDeviceRequest,
                   nsIPresentationDeviceRequest) 
+
+/////////////////////////////////////////////////////////////
+// Callback
+class Callback : public nsITimerCallback
+{
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSITIMERCALLBACK
+};
+
+NS_IMPL_ISUPPORTS(Callback, nsITimerCallback)
+
+NS_IMETHODIMP
+Callback::Notify(nsITimer* aTimer)
+{
+  LOG("Callback::Notify\n");
+  sPresentationService->NotifyAvailableListeners(true);
+  return NS_OK;
+};
+
+///////////////////////////////////////////////////////////////
+// DOMContentLoadedTimerCallback
+
+class DOMContentLoadedTimerCallback MOZ_FINAL : public nsITimerCallback
+{
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSITIMERCALLBACK
+
+  DOMContentLoadedTimerCallback(DOMContentLoadedListener* aListener)
+    : mListener(aListener)
+  {
+  }
+
+  ~DOMContentLoadedTimerCallback()
+  {
+    mListener = nullptr;
+  }
+
+private:
+  nsRefPtr<DOMContentLoadedListener> mListener;
+};
+
+NS_IMPL_ISUPPORTS(DOMContentLoadedTimerCallback, nsITimerCallback)
+
+NS_IMETHODIMP
+DOMContentLoadedTimerCallback::Notify(nsITimer* aTimer)
+{
+  mListener->OnTimeout();
+  return NS_OK;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // PresentationService
@@ -148,23 +249,6 @@ PresentationService::Create()
   LOG("Parent\n");
   return new PresentationService();
 }
-
-// HACK
-class Callback : public nsITimerCallback
-{
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSITIMERCALLBACK
-};
-
-NS_IMETHODIMP
-Callback::Notify(nsITimer* aTimer)
-{
-  LOG("Callback::Notify\n");
-  sPresentationService->NotifyAvailableListeners(true);
-  return NS_OK;
-};
-
-NS_IMPL_ISUPPORTS(Callback, nsITimerCallback)
 
 PresentationService::PresentationService()
   : mAvailable(false)
@@ -303,15 +387,32 @@ PresentationService::Observe(nsISupports* aSubject,
       obs->NotifyObservers(nullptr, "presentation-launch-receiver", url.get());
     }
   } else if (!strcmp(aTopic, "presentation-receiver-launched")) {
-    nsCOMPtr<nsIFrameLoader> frameLoader = do_QueryInterface(aSubject);
-    if (NS_WARN_IF(!frameLoader)) {
+    nsCOMPtr<nsIFrameLoaderOwner> flOwner = do_QueryInterface(aSubject);
+    if (NS_WARN_IF(!flOwner)) {
       return NS_OK;
     }
-    nsresult rv =
-      frameLoader->ActivateFrameEvent(NS_LITERAL_STRING("DOMContentLoaded"),
-                                      false);
-    // AddEventListener
+
+    nsCOMPtr<nsIFrameLoader> frameLoader;
+    if (NS_WARN_IF(NS_FAILED(flOwner->GetFrameLoader(getter_AddRefs(frameLoader))))) {
+      return NS_OK;
+    }
+
+    frameLoader->ActivateFrameEvent(NS_LITERAL_STRING("DOMContentLoaded"),
+                                    false);
     mozilla::unused << NS_WARN_IF(NS_FAILED(rv));
+
+    nsCOMPtr<nsIDOMEventTarget> et = do_QueryInterface(aSubject);
+    if (NS_WARN_IF(!et)) {
+      return NS_OK;
+    }
+
+    nsRefPtr<DOMContentLoadedListener> listener = new DOMContentLoadedListener(et);
+    et->AddEventListener(NS_LITERAL_STRING("DOMContentLoaded"), listener, false);
+
+    mDOMContentLoadedTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
+    nsCOMPtr<nsITimerCallback> callback =
+      new DOMContentLoadedTimerCallback(listener);
+    mTimer->InitWithCallback(callback, 1000, nsITimer::TYPE_ONE_SHOT);
   } else {
     MOZ_ASSERT(false, "Unexpected topic for PresentationService.");
     rv = NS_ERROR_UNEXPECTED;
@@ -400,14 +501,6 @@ PresentationService::GenerateUniqueId(nsAString& aId)
   aId = NS_ConvertUTF8toUTF16(nsPrintfCString("%16lu", ++mLastUniqueId));
 }
 
-/* static */ bool
-PresentationService::AddSessionInfo(const nsAString& aKey,
-                                    SessionInfo* aInfo)
-{
-  mSessionInfo.Put(aKey, aInfo);
-  return true;
-}
-
 PresentationService::SessionInfo*
 PresentationService::GetSessionInfo(const nsAString& aUrl,
                                     const nsAString& aId)
@@ -424,17 +517,29 @@ PresentationService::GetSessionInfo(const nsAString& aUrl,
 void
 PresentationService::OnSessionComplete(SessionTransport* aTransport)
 {
+  MOZ_ASSERT(mRequester || mResponder);
 
+  SessionInfo* info = new SessionInfo(aTransport->mDevice, aTransport);
+  mSessionInfo.Put(aTransport->mId, info);
+  if (mRequester) {
+    mRequester->mCallback->NotifySuccess();
+  }
 }
 
 void
-PresentationService::OnSessionFailure()
+PresentationService::OnSessionFailure(const nsAString& aError)
 {
+  MOZ_ASSERT(mRequester || mResponder);
 
+  if (mRequester) {
+    mRequester->mCallback->NotifyError(aError);
+  }
 }
 
 void
 PresentationService::OnReceiverReady()
 {
+  MOZ_ASSERT(mRequester);
 
+  mRequester->Connect();
 }

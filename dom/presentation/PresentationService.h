@@ -90,9 +90,6 @@ public:
   void
   GenerateUniqueId(nsAString& aId);
 
-  bool
-  AddSessionInfo(const nsAString& aKey, SessionInfo* aInfo);
-
   /**
    * Notify registered listeners of the change of device availablility.
    */
@@ -115,7 +112,7 @@ public:
    * Something is wrong.
    */
   void
-  OnSessionFailure();
+  OnSessionFailure(const nsAString& aError);
 
   /**
    * Sender should continue to establish transport channel.
@@ -195,11 +192,13 @@ private:
     SessionRequester(const nsAString& aId,
                      nsIPresentationDevice* aDevice,
                      nsIPresentationControlChannel* aCtrlChannel,
-                     PresentationService* aService)
+                     PresentationService* aService,
+                     nsIPresentationServiceCallback* aCallback)
       : mId(aId)
       , mDevice(aDevice)
       , mChannel(aCtrlChannel)
       , mService(aService)
+      , mCallback(aCallback)
     { 
     }
 
@@ -208,6 +207,7 @@ private:
       mService = nullptr;
       mDevice = nullptr;
       mChannel = nullptr;
+      mCallback = nullptr;
     }
 
     void
@@ -221,6 +221,7 @@ private:
     {
     }
 
+    nsCOMPtr<nsIPresentationServiceCallback> mCallback;
   private:
     nsString mId;
     nsCOMPtr<nsIPresentationDevice> mDevice;
@@ -271,6 +272,8 @@ private:
   };
   
   SessionResponder* mResponder;
+
+  nsCOMPtr<nsITimer> mDOMContentLoadedTimer;
 
   // HACK
   nsCOMPtr<nsITimer> mTimer;

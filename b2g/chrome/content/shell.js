@@ -741,10 +741,10 @@ var CustomEventManager = {
       case 'do-command':
         DoCommandHelper.handleEvent(detail.cmd);
       case 'presentation-receiver-launched':
-        Services.obs.notifyObservers(null, 'presentation-receiver-launched', detail.frame);
-        detail.frame.addEventListener('DOMContentLoaded', function ready(){
+        Services.obs.notifyObservers(detail.frame, 'presentation-receiver-launched', null);
+/*        detail.frame.addEventListener('DOMContentLoaded', function ready(){
           Services.obs.notifyObservers(null, 'presentation-receiver-ready', null);
-        });
+        });*/
         break;
     }
   }
