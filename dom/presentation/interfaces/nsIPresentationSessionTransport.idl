@@ -4,6 +4,8 @@
 
 #include "nsISupports.idl"
 
+interface nsIInputStream;
+
 /*
  * The callbacks for session transport events.
  */
@@ -12,7 +14,7 @@ interface nsIPresentationSessionTransportCallback : nsISupports
 {
   void onComplete();
   void onClose(in nsresult reason);
-  void onMessage(in ACString data);
+  void onData(in ACString data);
 };
 
 /*
@@ -21,13 +23,11 @@ interface nsIPresentationSessionTransportCallback : nsISupports
 [scriptable, uuid(d7204f57-0085-4101-b70b-2d2ae4302f6b)]
 interface nsIPresentationSessionTransport : nsISupports
 {
-  // The callback for handling any transport events.
-  attribute nsIPresentationSessionTransportCallback callback;
-
   /*
    * send message to remote endpoint
+   * @param data the message to send.
    */
-  void sendMessage(in ACString data);
+  void send(in nsIInputStream data);
 
   /*
    * close this session transport
@@ -35,4 +35,3 @@ interface nsIPresentationSessionTransport : nsISupports
    */
   void close(in nsresult reason);
 };
-

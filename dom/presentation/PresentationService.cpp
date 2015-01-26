@@ -18,7 +18,7 @@
 #include "nsServiceManagerUtils.h" // do_GetService
 #include "nsString.h"
 #include "nsXULAppAPI.h" // XRE_GetProcessType
-#include "NavigatorPresentation.h"
+#include "Presentation.h"
 #include "PresentationService.h"
 #include "PresentationSessionRequest.h"
 
@@ -141,19 +141,25 @@ PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aD
 {
   LOG("PresentationDeviceRequest::Select\n");
   MOZ_ASSERT(NS_IsMainThread());
-  MOZ_ASSERT(aDevice);
+  NS_ENSURE_ARG(aDevice);
 
-  nsCOMPtr<nsIPresentationControlChannel> ctrlChannel;
-  nsresult rv = aDevice->EstablishControlChannel(mRequestUrl, mId,
-                                                 getter_AddRefs(ctrlChannel));
-
+  // Update SesisonInfo.device when user selects a device.
   SessionInfo* info = mService->GetSessionInfo(mId);
-  info->session = Session::CreateRequester(mId, ctrlChannel, mService);
+  if (!info) {
+    return NS_OK;
+  }
   info->device = aDevice;
 
-  if (NS_FAILED(rv)) {
+  // Establish control channel. If we failed to do so, the callback is called
+  // with an error message.
+  nsCOMPtr<nsIPresentationControlChannel> ctrlChannel;
+  if (NS_FAILED(aDevice->EstablishControlChannel(mRequestUrl, mId,
+                                                 getter_AddRefs(ctrlChannel)))) {
     info->callback->NotifyError(NS_LITERAL_STRING("NoControlChannel"));
   }
+
+   // Create requester and then update SessionInfo. 
+  info->session = Session::CreateRequester(mId, mService, ctrlChannel);
 
   return NS_OK;
 }
@@ -162,6 +168,13 @@ NS_IMETHODIMP
 PresentationService::PresentationDeviceRequest::Cancel()
 {
   SessionInfo* info = mService->GetSessionInfo(mId);
+  if (NS_WARN_IF(!info)) {
+    return NS_OK;
+  }
+
+  // The user cancel the prompt, thus reply the callback and reject the promise
+  // then.
+  MOZ_ASSERT(info->callback);
   info->callback->NotifyError(NS_LITERAL_STRING("UserCanceled"));
   return NS_OK;
 }
@@ -370,29 +383,30 @@ PresentationService::Observe(nsISupports* aSubject,
       return NS_OK;
     }
 
-    nsAutoString id, url;
+    nsAutoString id;
     nsCOMPtr<nsIPresentationControlChannel> ctrlChannel;
     nsCOMPtr<nsIPresentationDevice> device;
     request->GetPresentationId(id);
-    request->GetUrl(url);
     request->GetControlChannel(getter_AddRefs(ctrlChannel));
     request->GetDevice(getter_AddRefs(device));
 
-    SessionInfo* info = new SessionInfo(nullptr, device, nullptr, nullptr);
+    SessionInfo* info = new SessionInfo(device);
+    info->session = Session::CreateResponder(id, this, ctrlChannel);
     mSessionInfo.Put(id, info);
 
-//    mResponder = new SessionResponder(id, device, ctrlChannel, sPresentationService);
-
+    nsAutoString url;
+    request->GetUrl(url);
     if (!FindAppOnDevice(url)) {
       // On Sender side, PresentationService::OnSessionFailure() should be called.
-      ctrlChannel->Close();
+      // XXX
+      ctrlChannel->Close(NS_ERROR_FAILURE);
     } else {
       nsCOMPtr<nsIObserverService> obs = GetObserverService();
       if (!obs) {
         return NS_OK;
       }
 
-      obs->NotifyObservers(nullptr, "presentation-launch-receiver", url.get());
+      obs->NotifyObservers(aSubject, "presentation-launch-receiver", nullptr);
     }
   } else if (!strcmp(aTopic, "presentation-receiver-launched")) {
     nsCOMPtr<nsIFrameLoaderOwner> flOwner = do_QueryInterface(aSubject);
@@ -414,7 +428,12 @@ PresentationService::Observe(nsISupports* aSubject,
       return NS_OK;
     }
 
-//    SessionInfo* info = GetSessionInfo(mResponder->mId);
+    nsDependentString id(aData);
+    SessionInfo* info = GetSessionInfo(id);
+    if (NS_WARN_IF(!info)) {
+      return NS_OK;
+    }
+
     nsRefPtr<DOMContentLoadedListener> listener = new DOMContentLoadedListener(et, nullptr);
     et->AddEventListener(NS_LITERAL_STRING("DOMContentLoaded"), listener, false);
 
@@ -453,12 +472,14 @@ PresentationService::FindAppOnDevice(const nsAString& aUrl)
 PresentationService::StartSessionInternal(const nsAString& aUrl,
                                           const nsAString& aId,
                                           const nsAString& aOrigin,
-                                          nsIPresentationServiceCallback* aCallback)
+                                          nsIPresentationRequestCallback* aCallback)
 {
   LOG("StartSessionInternal\n");
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(aCallback);
 
+  // Create SessionInfo and set SessionInfo.callback. The callback is called
+  // when the request is finished.
   SessionInfo* info = new SessionInfo(aCallback);
   mSessionInfo.Put(aId, info);
 
@@ -526,20 +547,55 @@ PresentationService::GetSessionInfo(const nsAString& aId)
 void
 PresentationService::OnSessionComplete(Session* aSession)
 {
+  MOZ_ASSERT(NS_IsMainThread());
+  if (!aSession) {
+    return;
+  }
+
   SessionInfo* info = GetSessionInfo(aSession->Id());
-  info->listener->NotifyStateChange(aSession->Id(), 1, NS_OK);
-  info->callback->NotifySuccess();
+  if (NS_WARN_IF(!info)) {
+    return;
+  }
+
+  // Session transport has been established, so notify listener of the state
+  // change and invoke callback if any.
+  if (info->listener) {
+    info->listener->NotifyStateChange(aSession->Id(),
+                                      (uint16_t)PresentationSessionState::Connected,
+                                      NS_OK);
+  }
+  if (info->callback) {
+    info->callback->NotifySuccess();
+  }
 }
 
 void
-PresentationService::OnSessionClose(Session* aSession, nsresult& aReason)
+PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
 {
-  SessionInfo* info = GetSessionInfo(aSession->Id());
-  MOZ_ASSERT(info->listener);
-  info->listener->NotifyStateChange(aSession->Id(), 0, aReason);
-  info->callback->NotifyError(NS_LITERAL_STRING("Error"));
+  MOZ_ASSERT(NS_IsMainThread());
+  if (!aSession) {
+    return;
+  }
 
-  if (!NS_FAILED(aReason)) {
+  SessionInfo* info = GetSessionInfo(aSession->Id());
+  if (NS_WARN_IF(!info)) {
+    return;
+  }
+
+  // The session transport is closed, so notify listener of the state change.
+  if (info->listener) {
+    info->listener->NotifyStateChange(aSession->Id(),
+                                      (uint16_t)PresentationSessionState::Disconnected,
+                                      aReason);
+  }
+
+  // Invoke the callback with error emssage if something is wrong. Otherwise,
+  // remove the SessionInfo record in service since it's closed gracefully.
+  if (NS_FAILED(aReason)) {
+    if (info->callback) {
+      info->callback->NotifyError(NS_LITERAL_STRING("FailedToEstablishSession"));
+    }
+  } else {
     info->session = nullptr;
     mSessionInfo.Remove(aSession->Id());
   }

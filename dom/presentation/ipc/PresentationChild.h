@@ -9,7 +9,7 @@
 
 #include "mozilla/dom/presentation/PPresentationChild.h"
 #include "mozilla/dom/presentation/PPresentationRequestChild.h"
-#include "nsIPresentationServiceCallback.h"
+#include "nsIPresentationRequestCallback.h"
 
 namespace mozilla {
 namespace dom {
@@ -45,7 +45,7 @@ private:
 class PresentationRequestChild : public PPresentationRequestChild
 {
 public:
-  PresentationRequestChild(nsIPresentationServiceCallback* aCallback);
+  PresentationRequestChild(nsIPresentationRequestCallback* aCallback);
 
 protected:
   virtual ~PresentationRequestChild();
@@ -65,7 +65,7 @@ private:
   bool
   DoResponse(const PresentationSuccessResponse& aResponse);
 
-  nsCOMPtr<nsIPresentationServiceCallback> mCallback;
+  nsCOMPtr<nsIPresentationRequestCallback> mCallback;
 };
 
 } // namespace presentation

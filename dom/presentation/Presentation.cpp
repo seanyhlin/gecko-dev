@@ -4,9 +4,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "NavigatorPresentation.h"
+#include "Presentation.h"
 #include "nsIPresentationDeviceManager.h"
-#include "mozilla/dom/NavigatorPresentationBinding.h"
+#include "mozilla/dom/PresentationBinding.h"
 #include "mozilla/dom/Promise.h"
 #include "PresentationService.h"
 
@@ -27,15 +27,15 @@ using namespace mozilla::dom::presentation;
 
 // StartSessionCallback
 
-NS_IMPL_ISUPPORTS(StartSessionCallback, nsIPresentationServiceCallback)
+NS_IMPL_ISUPPORTS(StartSessionCallback, nsIPresentationRequestCallback)
 
-StartSessionCallback::StartSessionCallback(NavigatorPresentation* aNavigatorPresentation,
+StartSessionCallback::StartSessionCallback(Presentation* aPresentation,
                                            const nsAString& aUrl,
                                            const nsAString& aId,
                                            const nsAString& aOrigin,
                                            Promise* aPromise,
                                            nsPIDOMWindow* aWindow)
-  : mNavigatorPresentation(aNavigatorPresentation)
+  : mPresentation(aPresentation)
   , mId(aId)
   , mPromise(aPromise)
   , mWindow(aWindow)
@@ -45,7 +45,7 @@ StartSessionCallback::StartSessionCallback(NavigatorPresentation* aNavigatorPres
 
 StartSessionCallback::~StartSessionCallback()
 {
-  mNavigatorPresentation = nullptr;
+  mPresentation = nullptr;
   mPromise = nullptr;
   mWindow = nullptr;
 }
@@ -73,26 +73,26 @@ StartSessionCallback::NotifyError(const nsAString& aError)
   return NS_OK;
 }
 
-// NavigatorPresentation
+// Presentation
 
-NS_IMPL_CYCLE_COLLECTION_INHERITED(NavigatorPresentation, DOMEventTargetHelper, mSession)
+NS_IMPL_CYCLE_COLLECTION_INHERITED(Presentation, DOMEventTargetHelper, mSession)
 
-NS_IMPL_ADDREF_INHERITED(NavigatorPresentation, DOMEventTargetHelper)
-NS_IMPL_RELEASE_INHERITED(NavigatorPresentation, DOMEventTargetHelper)
+NS_IMPL_ADDREF_INHERITED(Presentation, DOMEventTargetHelper)
+NS_IMPL_RELEASE_INHERITED(Presentation, DOMEventTargetHelper)
 
-NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(NavigatorPresentation)
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(Presentation)
 NS_INTERFACE_MAP_END_INHERITING(DOMEventTargetHelper)
 
-/* static */ already_AddRefed<NavigatorPresentation>
-NavigatorPresentation::Create(nsPIDOMWindow* aWindow)
+/* static */ already_AddRefed<Presentation>
+Presentation::Create(nsPIDOMWindow* aWindow)
 {
-  nsRefPtr<NavigatorPresentation> presentation =
-    new NavigatorPresentation(aWindow);
+  nsRefPtr<Presentation> presentation =
+    new Presentation(aWindow);
 
   return presentation.forget();
 }
 
-NavigatorPresentation::NavigatorPresentation(nsPIDOMWindow* aWindow)
+Presentation::Presentation(nsPIDOMWindow* aWindow)
   : DOMEventTargetHelper(aWindow)
   , mAvailable(false)
   , mSession(nullptr)
@@ -100,7 +100,7 @@ NavigatorPresentation::NavigatorPresentation(nsPIDOMWindow* aWindow)
   NS_WARN_IF(!Init());
 }
 
-/* virtual */ NavigatorPresentation::~NavigatorPresentation()
+/* virtual */ Presentation::~Presentation()
 {
   PresentationService* service = PresentationService::Get();
   if (!NS_WARN_IF(service)) {
@@ -110,7 +110,7 @@ NavigatorPresentation::NavigatorPresentation(nsPIDOMWindow* aWindow)
 }
 
 bool
-NavigatorPresentation::Init()
+Presentation::Init()
 {
   PresentationService* service = PresentationService::Get();
   if (!service) {
@@ -126,13 +126,13 @@ NavigatorPresentation::Init()
 }
 
 /* virtual */ JSObject*
-NavigatorPresentation::WrapObject(JSContext* aCx)
+Presentation::WrapObject(JSContext* aCx)
 {
-  return NavigatorPresentationBinding::Wrap(aCx, this);
+  return PresentationBinding::Wrap(aCx, this);
 }
 
 already_AddRefed<Promise>
-NavigatorPresentation::StartSession(const nsAString& aUrl,
+Presentation::StartSession(const nsAString& aUrl,
                                     const Optional<nsAString>& aId,
                                     ErrorResult& aRv)
 {
@@ -173,7 +173,7 @@ NavigatorPresentation::StartSession(const nsAString& aUrl,
     service->GenerateUniqueId(id);
   }
 
-  nsCOMPtr<nsIPresentationServiceCallback> callback =
+  nsCOMPtr<nsIPresentationRequestCallback> callback =
     new StartSessionCallback(this, aUrl, id, origin, promise, GetOwner());
   if (NS_FAILED(service->StartSessionInternal(aUrl, id, origin, callback))) {
     promise->MaybeReject(NS_ERROR_DOM_OPERATION_ERR);
@@ -183,7 +183,7 @@ NavigatorPresentation::StartSession(const nsAString& aUrl,
 }
 
 already_AddRefed<Promise>
-NavigatorPresentation::JoinSession(const nsAString& aUrl,
+Presentation::JoinSession(const nsAString& aUrl,
                                    const nsAString& aId,
                                    ErrorResult& aRv)
 {
@@ -218,32 +218,32 @@ NavigatorPresentation::JoinSession(const nsAString& aUrl,
 }
 
 already_AddRefed<PresentationSession>
-NavigatorPresentation::GetSession() const
+Presentation::GetSession() const
 {
   nsRefPtr<PresentationSession> session = mSession;
   return session.forget();
 }
 
 bool
-NavigatorPresentation::Available() const
+Presentation::Available() const
 {
-  LOG("NavigatorPresentation::Available %d\n", mAvailable);
+  LOG("Presentation::Available %d\n", mAvailable);
   return mAvailable;
 }
 
 NS_IMETHODIMP
-NavigatorPresentation::NotifyAvailableChange(bool aAvailable)
+Presentation::NotifyAvailableChange(bool aAvailable)
 {
-  LOG("NavigatorPresentation::NotifyAvailableChange, %d\n", aAvailable);
+  LOG("Presentation::NotifyAvailableChange, %d\n", aAvailable);
   mAvailable = aAvailable;
   DispatchTrustedEvent(AVAILABLECHANGE_EVENT_NAME);
   return NS_OK;
 }
 
 NS_IMETHODIMP
-NavigatorPresentation::NotifySessionReady(const nsAString& aId)
+Presentation::NotifySessionReady(const nsAString& aId)
 {
-  LOG("NavigatorPresentation::NotifySessionReady\n");
+  LOG("Presentation::NotifySessionReady\n");
   mSession = new PresentationSession(GetOwner(), aId);
   DispatchTrustedEvent(SESSIONREADY_EVENT_NAME);
   return NS_OK;

@@ -5,7 +5,7 @@
 #include "nsISupports.idl"
 
 [scriptable, uuid(12073206-0065-4b10-9488-a6eb9b23e65b)]
-interface nsIPresentationServiceCallback : nsISupports
+interface nsIPresentationRequestCallback : nsISupports
 {
   /**
    * Called when the operation succeeds.

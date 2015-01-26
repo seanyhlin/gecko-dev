@@ -81,7 +81,7 @@ PresentationChild::RecvNotifySessionReady(const nsString& aId)
 
 // PresentationRequestChild
 
-PresentationRequestChild::PresentationRequestChild(nsIPresentationServiceCallback* aCallback)
+PresentationRequestChild::PresentationRequestChild(nsIPresentationRequestCallback* aCallback)
   : mCallback(aCallback)
 {
 }

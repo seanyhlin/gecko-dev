@@ -37,7 +37,7 @@
 #include "mozilla/dom/power/PowerManagerService.h"
 #include "mozilla/dom/CellBroadcast.h"
 #include "mozilla/dom/MobileMessageManager.h"
-#include "mozilla/dom/presentation/NavigatorPresentation.h"
+#include "mozilla/dom/presentation/Presentation.h"
 #include "mozilla/dom/ServiceWorkerContainer.h"
 #include "mozilla/dom/Telephony.h"
 #include "mozilla/dom/Voicemail.h"
@@ -2639,7 +2639,7 @@ Navigator::RequestMediaKeySystemAccess(const nsAString& aKeySystem,
 }
 #endif
 
-presentation::NavigatorPresentation*
+presentation::Presentation*
 Navigator::GetMozPresentation(ErrorResult& aRv)
 {
   if (!mPresentation) {
@@ -2647,7 +2647,7 @@ Navigator::GetMozPresentation(ErrorResult& aRv)
       aRv.Throw(NS_ERROR_UNEXPECTED);
       return nullptr;
     }
-    mPresentation = new presentation::NavigatorPresentation(mWindow);
+    mPresentation = new presentation::Presentation(mWindow);
   }
 
   return mPresentation;

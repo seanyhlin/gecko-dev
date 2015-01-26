@@ -99,7 +99,7 @@ class Voicemail;
 class TVManager;
 
 namespace presentation {
-class NavigatorPresentation;
+class Presentation;
 } // namespace presentation
 
 namespace time {
@@ -266,7 +266,7 @@ public:
   system::AudioChannelManager* GetMozAudioChannelManager(ErrorResult& aRv);
 #endif // MOZ_AUDIO_CHANNEL_MANAGER
 
-  presentation::NavigatorPresentation* GetMozPresentation(ErrorResult& aRv);
+  presentation::Presentation* GetMozPresentation(ErrorResult& aRv);
 
   bool SendBeacon(const nsAString& aUrl,
                   const Nullable<ArrayBufferViewOrBlobOrStringOrFormData>& aData,
@@ -375,7 +375,7 @@ private:
   nsRefPtr<time::TimeManager> mTimeManager;
   nsRefPtr<ServiceWorkerContainer> mServiceWorkerContainer;
   nsCOMPtr<nsPIDOMWindow> mWindow;
-  nsRefPtr<presentation::NavigatorPresentation> mPresentation;
+  nsRefPtr<presentation::Presentation> mPresentation;
 
   // Hashtable for saving cached objects DoResolve created, so we don't create
   // the object twice if asked for it twice, whether due to use of "delete" or

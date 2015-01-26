@@ -11,12 +11,6 @@
 #include "PresentationParent.h"
 #include "PresentationService.h"
 
-//#include "mozilla/Assertions.h"
-//#include "mozilla/unused.h"
-//#include "nsDebug.h"
-//#include "nsISupportsImpl.h"
-//#include "nsThreadUtils.h"
-
 using namespace mozilla::dom;
 using namespace mozilla::dom::presentation;
 
@@ -122,7 +116,7 @@ PresentationParent::NotifySessionReady(const nsAString& aId)
 
 // PresentationRequestParent
 
-NS_IMPL_ISUPPORTS(PresentationRequestParent, nsIPresentationServiceCallback)
+NS_IMPL_ISUPPORTS(PresentationRequestParent, nsIPresentationRequestCallback)
 
 PresentationRequestParent::PresentationRequestParent()
 {

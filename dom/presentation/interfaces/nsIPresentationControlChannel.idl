@@ -32,7 +32,7 @@ interface nsIPresentationChannelDescription: nsISupports
 /*
  * The callbacks for events on control channel.
  */
-[scriptable, uuid(d0cdc638-a9d5-4bcd-838c-3aed7c3f2a6b)]
+[scriptable, uuid(201116ea-4e94-46fe-b5a0-d5507a046a16)]
 interface nsIPresentationControlChannelListener: nsISupports
 {
   /*
@@ -57,18 +57,30 @@ interface nsIPresentationControlChannelListener: nsISupports
    * @param reason The reason of channel close, NS_OK represents normal close.
    */
   void notifyClosed(in nsresult reason);
+
+
+  /*
+   * The callback for notifying session ready at remote endpoint.
+   */
+  void notifyReceiverReady();
 };
 
 /*
  * The control channel for establishing RTCPeerConnection for a presentation
  * session. SDP Offer/Answer will be exchanged through this interface.
  */
-[scriptable, uuid(6bff04b9-8e79-466f-9446-f969de646fd3)]
+[scriptable, uuid(0a2d58e0-d968-4587-8320-01587f4094a0)]
 interface nsIPresentationControlChannel: nsISupports
 {
   // The listener for handling events of this control channel.
   // All the events should be pending until listener is assigned.
   attribute nsIPresentationControlChannelListener listener;
+
+  /*
+   * Notify session is loaded and ready to establish
+   * app-to-app connection. Only used by receiver side.
+   */
+  void receiverReady();
 
   /*
    * Send offer to remote endpiont. |onOffer| should be invoked
@@ -86,6 +98,7 @@ interface nsIPresentationControlChannel: nsISupports
 
   /*
    * Close the transport channel.
+   * @param reason the reason of channel close, NS_OK represents normal close.
    */
-  void close();
+  void close(in nsresult reason);
 };

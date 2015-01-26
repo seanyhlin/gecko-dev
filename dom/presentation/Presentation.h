@@ -4,15 +4,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ifndef mozilla_dom_presentation_NavigatorPresentation_h
-#define mozilla_dom_presentation_NavigatorPresentation_h
+#ifndef mozilla_dom_presentation_Presentation_h
+#define mozilla_dom_presentation_Presentation_h
 
 #include "mozilla/Attributes.h"
 #include "mozilla/DOMEventTargetHelper.h"
 #include "mozilla/ErrorResult.h"
 #include "nsCycleCollectionParticipant.h"
 #include "nsIObserver.h"
-#include "nsIPresentationServiceCallback.h"
+#include "nsIPresentationRequestCallback.h"
 #include "nsServiceManagerUtils.h"
 #include "nsWrapperCache.h"
 #include "PresentationSession.h"
@@ -26,54 +26,60 @@ class Promise;
 
 namespace presentation {
 
-class NavigatorPresentation MOZ_FINAL : public DOMEventTargetHelper
-                                      , public nsIPresentationListener
+class Presentation MOZ_FINAL : public DOMEventTargetHelper
+                             , public nsIPresentationListener
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(NavigatorPresentation,
+  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(Presentation,
                                            DOMEventTargetHelper)
   NS_DECL_NSIPRESENTATIONLISTENER
 
-  virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE;
+  virtual JSObject*
+  WrapObject(JSContext* aCx) MOZ_OVERRIDE;
 
-  static already_AddRefed<NavigatorPresentation> Create(nsPIDOMWindow* aWindow);
+  static already_AddRefed<Presentation>
+  Create(nsPIDOMWindow* aWindow);
 
-  NavigatorPresentation(nsPIDOMWindow* aWindow);
+  Presentation(nsPIDOMWindow* aWindow);
 
   // WebIDL (public APIs)
 
-  already_AddRefed<Promise> StartSession(const nsAString& aUrl,
-                                         const Optional<nsAString>& aId,
-                                         ErrorResult& aRv);
+  already_AddRefed<Promise>
+  StartSession(const nsAString& aUrl,
+               const Optional<nsAString>& aId,
+               ErrorResult& aRv);
 
-  already_AddRefed<Promise> JoinSession(const nsAString& aUrl,
-                                        const nsAString& aId,
-                                        ErrorResult& aRv);
+  already_AddRefed<Promise>
+  JoinSession(const nsAString& aUrl,
+              const nsAString& aId,
+              ErrorResult& aRv);
 
-  already_AddRefed<PresentationSession> GetSession() const;
+  already_AddRefed<PresentationSession>
+  GetSession() const;
   
   IMPL_EVENT_HANDLER(sessionready);
 
-  bool Available() const;
+  bool
+  Available() const;
 
   IMPL_EVENT_HANDLER(availablechange);
 
 private:
-  virtual ~NavigatorPresentation();
+  virtual ~Presentation();
   bool Init();
 
   bool mAvailable;
   nsRefPtr<PresentationSession> mSession;
 };
 
-class StartSessionCallback : public nsIPresentationServiceCallback
+class StartSessionCallback : public nsIPresentationRequestCallback
 {
 public:
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIPRESENTATIONSERVICECALLBACK
+  NS_DECL_NSIPRESENTATIONREQUESTCALLBACK
 
-  StartSessionCallback(NavigatorPresentation* aNavigatorPresentation,
+  StartSessionCallback(Presentation* aPresentation,
                        const nsAString& aUrl,
                        const nsAString& aId,
                        const nsAString& aOrigin,
@@ -83,7 +89,7 @@ public:
 private:
   virtual ~StartSessionCallback();
 
-  nsRefPtr<NavigatorPresentation> mNavigatorPresentation;
+  nsRefPtr<Presentation> mPresentation;
   nsString mId;
   nsRefPtr<Promise> mPromise;
   nsCOMPtr<nsPIDOMWindow> mWindow;
@@ -93,4 +99,4 @@ private:
 } // namespace dom
 } // namespace mozilla
 
-#endif // mozilla_dom_presentation_NavigatorPresentation_h
+#endif // mozilla_dom_presentation_Presentation_h

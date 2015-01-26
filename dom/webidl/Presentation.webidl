@@ -11,7 +11,7 @@
  */
 
 [Pref="dom.presentation.enabled", AvailableIn="PrivilegedApps"]
-interface NavigatorPresentation : EventTarget {
+interface Presentation : EventTarget {
   /**
    * The requesting page use this function to start a new session, and the
    * promise is resolved to an object of PresentationSession.

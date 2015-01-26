@@ -9,7 +9,7 @@
 
 #include "mozilla/dom/presentation/PPresentationParent.h"
 #include "mozilla/dom/presentation/PPresentationRequestParent.h"
-#include "nsIPresentationServiceCallback.h"
+#include "nsIPresentationRequestCallback.h"
 
 namespace mozilla {
 namespace dom {
@@ -58,11 +58,11 @@ private:
 };
 
 class PresentationRequestParent : public PPresentationRequestParent
-                                , public nsIPresentationServiceCallback
+                                , public nsIPresentationRequestCallback
 {
 public:
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIPRESENTATIONSERVICECALLBACK
+  NS_DECL_NSIPRESENTATIONREQUESTCALLBACK
 
 protected:
   PresentationRequestParent();

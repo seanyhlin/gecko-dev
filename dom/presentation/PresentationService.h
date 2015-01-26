@@ -10,7 +10,7 @@
 #include "nsCOMPtr.h"
 #include "nsClassHashtable.h"
 #include "nsIObserver.h"
-#include "nsIPresentationServiceCallback.h"
+#include "nsIPresentationRequestCallback.h"
 #include "nsIPresentationDevice.h"
 #include "nsIPresentationDevicePrompt.h" // nsIPresentationDeviceRequest
 #include "nsIServerSocket.h"
@@ -60,7 +60,7 @@ public:
   StartSessionInternal(const nsAString& aUrl,
                        const nsAString& aId,
                        const nsAString& aOrigin,
-                       nsIPresentationServiceCallback* aCallback);
+                       nsIPresentationRequestCallback* aCallback);
 
   /**
    * Join a existing presentation session.
@@ -113,7 +113,7 @@ public:
   OnSessionComplete(Session* aSession);
 
   void
-  OnSessionClose(Session* aSession, nsresult& aReason);
+  OnSessionClose(Session* aSession, nsresult aReason);
 
   void
   OnSessionMessage(Session* aSession, const nsACString& aMessage);
@@ -168,14 +168,18 @@ private:
 
   struct SessionInfo
   {
-    SessionInfo(nsIPresentationServiceCallback* aCallback)
+    SessionInfo(nsIPresentationRequestCallback* aCallback)
       : callback(aCallback)
+    { }
+
+    SessionInfo(nsIPresentationDevice* aDevice)
+      : device(aDevice)
     { }
 
     SessionInfo(Session* aSession,
                 nsIPresentationDevice* aDevice,
                 nsIPresentationSessionListener* aListener,
-                nsIPresentationServiceCallback* aCallback)
+                nsIPresentationRequestCallback* aCallback)
       : session(aSession)
       , device(aDevice)
       , listener(aListener)
@@ -185,7 +189,7 @@ private:
     nsRefPtr<Session> session;
     nsCOMPtr<nsIPresentationDevice> device;
     nsCOMPtr<nsIPresentationSessionListener> listener;
-    nsCOMPtr<nsIPresentationServiceCallback> callback;
+    nsCOMPtr<nsIPresentationRequestCallback> callback;
   };
 
   nsClassHashtable<nsStringHashKey, SessionInfo> mSessionInfo;

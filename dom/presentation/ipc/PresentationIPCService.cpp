@@ -56,7 +56,7 @@ PresentationIPCService::UnregisterListener(nsIPresentationListener* aListener)
 PresentationIPCService::StartSessionInternal(const nsAString& aUrl,
                                              const nsAString& aSessionId,
                                              const nsAString& aOrigin,
-                                             nsIPresentationServiceCallback* aCallback)
+                                             nsIPresentationRequestCallback* aCallback)
 {
   return SendRequest(aCallback,
                      StartSessionRequest(nsString(aUrl), nsString(aSessionId), nsString(aOrigin)));
@@ -71,7 +71,7 @@ PresentationIPCService::JoinSessionInternal(const nsAString& aUrl,
 }
 
 nsresult
-PresentationIPCService::SendRequest(nsIPresentationServiceCallback* aCallback,
+PresentationIPCService::SendRequest(nsIPresentationRequestCallback* aCallback,
                                     const PresentationRequest& aRequest)
 {
   if (!sPresentationChild) {

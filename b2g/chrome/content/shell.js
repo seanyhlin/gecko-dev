@@ -699,9 +699,11 @@ Services.obs.addObserver(function(subject, topic, data) {
 }, 'memory-pressure', false);
 
 Services.obs.addObserver(function(subject, topic, data) {
+  let request = subject.QueryInterface(Ci.nsIPresentationSessionRequest);
   shell.sendChromeEvent({
     type: "presentation-launch-receiver",
-    value: data
+    url: request.url,
+    id: request.presentationId
   });
 }, 'presentation-launch-receiver', false);
 
@@ -741,10 +743,7 @@ var CustomEventManager = {
       case 'do-command':
         DoCommandHelper.handleEvent(detail.cmd);
       case 'presentation-receiver-launched':
-        Services.obs.notifyObservers(detail.frame, 'presentation-receiver-launched', null);
-/*        detail.frame.addEventListener('DOMContentLoaded', function ready(){
-          Services.obs.notifyObservers(null, 'presentation-receiver-ready', null);
-        });*/
+        Services.obs.notifyObservers(detail.frame, 'presentation-receiver-launched', detail.id);
         break;
     }
   }

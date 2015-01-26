@@ -26,7 +26,7 @@ public:
   StartSessionInternal(const nsAString& aUrl,
                        const nsAString& aSessionId,
                        const nsAString& aOrigin,
-                       nsIPresentationServiceCallback* aCallback);
+                       nsIPresentationRequestCallback* aCallback);
 
   virtual nsresult
   JoinSessionInternal(const nsAString& aUrl,
@@ -44,7 +44,7 @@ private:
   virtual ~PresentationIPCService();
 
   nsresult
-  SendRequest(nsIPresentationServiceCallback* aCallback,
+  SendRequest(nsIPresentationRequestCallback* aCallback,
               const PresentationRequest& aRequest);
 };
 

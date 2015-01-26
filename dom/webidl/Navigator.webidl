@@ -407,7 +407,7 @@ partial interface Navigator {
 // For Presentation API
 partial interface Navigator {
   [Throws, Pref="dom.presentation.enabled", AvailableIn="PrivilegedApps"]
-  readonly attribute NavigatorPresentation? mozPresentation;
+  readonly attribute Presentation? mozPresentation;
 };
 
 partial interface Navigator {
