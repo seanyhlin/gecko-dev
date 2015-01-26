@@ -13,10 +13,11 @@
 #include "nsIPresentationServiceCallback.h"
 #include "nsIPresentationDevice.h"
 #include "nsIPresentationDevicePrompt.h" // nsIPresentationDeviceRequest
-//#include "nsString.h"
+#include "nsIServerSocket.h"
 #include "nsTObserverArray.h"
+#include "mozilla/dom/presentation/Session.h"
 
-#include "SessionTransport.h"
+#include "PresentationSessionTransport.h"
 
 // HACK
 #include "nsITimer.h"
@@ -25,9 +26,12 @@ namespace mozilla {
 namespace dom {
 namespace presentation {
 
+class Session;
+
 class PresentationService : public nsIObserver
 {
   struct SessionInfo;
+  friend class PresentationSessionTransport;
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIOBSERVER
@@ -102,28 +106,24 @@ public:
   void
   NotifySessionReady(const nsAString& aId);
 
-  /**
-   * Transport channel has been established.
-   */
   void
-  OnSessionComplete(SessionTransport* aTransport);
+  NotifyStateChange(bool aConnected);
 
-  /**
-   * Something is wrong.
-   */
   void
-  OnSessionFailure(const nsAString& aError);
+  OnSessionComplete(Session* aSession);
 
-  /**
-   * Sender should continue to establish transport channel.
-   */
   void
-  OnReceiverReady();
+  OnSessionClose(Session* aSession, nsresult& aReason);
+
+  void
+  OnSessionMessage(Session* aSession, const nsACString& aMessage);
 
 protected:
   PresentationService();
-  virtual ~PresentationService();
   
+  virtual
+  ~PresentationService();
+
   nsTObserverArray<nsCOMPtr<nsIPresentationListener> > mListeners;
 
 private:
@@ -155,7 +155,7 @@ private:
     PresentationDeviceRequest(const nsAString& aUrl,
                               const nsAString& aId,
                               const nsAString& aOrigin,
-                              nsIPresentationServiceCallback* aCallback);
+                              PresentationService* aService);
 
   private:
     virtual ~PresentationDeviceRequest();
@@ -163,115 +163,37 @@ private:
     nsString mRequestUrl;
     nsString mId;
     nsString mOrigin;
-    nsCOMPtr<nsIPresentationServiceCallback> mCallback;
+    nsRefPtr<PresentationService> mService;
   };
 
   struct SessionInfo
   {
-    SessionInfo(nsIPresentationDevice* aDevice, SessionTransport* aTransport)
-      : device(aDevice)
-      , transport(aTransport)
-    {
-    }
+    SessionInfo(nsIPresentationServiceCallback* aCallback)
+      : callback(aCallback)
+    { }
 
+    SessionInfo(Session* aSession,
+                nsIPresentationDevice* aDevice,
+                nsIPresentationSessionListener* aListener,
+                nsIPresentationServiceCallback* aCallback)
+      : session(aSession)
+      , device(aDevice)
+      , listener(aListener)
+      , callback(aCallback)
+    { }
+
+    nsRefPtr<Session> session;
     nsCOMPtr<nsIPresentationDevice> device;
-    nsRefPtr<SessionTransport> transport;
+    nsCOMPtr<nsIPresentationSessionListener> listener;
+    nsCOMPtr<nsIPresentationServiceCallback> callback;
   };
-  
+
   nsClassHashtable<nsStringHashKey, SessionInfo> mSessionInfo;
 
   SessionInfo*
-  GetSessionInfo(const nsAString& aUrl,
-                 const nsAString& aId);
+  GetSessionInfo(const nsAString& aId);
 
   uint32_t mLastUniqueId;
-
-  class SessionRequester
-  {
-  public:
-    SessionRequester(const nsAString& aId,
-                     nsIPresentationDevice* aDevice,
-                     nsIPresentationControlChannel* aCtrlChannel,
-                     PresentationService* aService,
-                     nsIPresentationServiceCallback* aCallback)
-      : mId(aId)
-      , mDevice(aDevice)
-      , mChannel(aCtrlChannel)
-      , mService(aService)
-      , mCallback(aCallback)
-    { 
-    }
-
-    ~SessionRequester()
-    {
-      mService = nullptr;
-      mDevice = nullptr;
-      mChannel = nullptr;
-      mCallback = nullptr;
-    }
-
-    void
-    Fail(const nsresult& aRv)
-    {
-      // On Receiver side, PresentationService::OnSessionFailure() should be called.
-    }
-
-    void
-    Connect()
-    {
-    }
-
-    nsCOMPtr<nsIPresentationServiceCallback> mCallback;
-  private:
-    nsString mId;
-    nsCOMPtr<nsIPresentationDevice> mDevice;
-    nsCOMPtr<nsIPresentationControlChannel> mChannel;
-    nsRefPtr<PresentationService> mService;
-  };
-
-  SessionRequester* mRequester;
-
-  class SessionResponder
-  {
-  public:
-    SessionResponder(const nsAString& aId,
-                     nsIPresentationDevice* aDevice,
-                     nsIPresentationControlChannel* aCtrlChannel,
-                     PresentationService* aService)
-      : mId(aId)
-      , mDevice(aDevice)
-      , mChannel(aCtrlChannel)
-      , mService(aService)
-    {
-    }
-
-    ~SessionResponder()
-    {
-      mDevice = nullptr;
-      mChannel = nullptr;
-      mService = nullptr;
-    }
-
-    void
-    ReceiverReady()
-    {
-      // On Sender side, PresentationService::OnReceiverReady() should be called.
-    }
-
-    void
-    Fail(const nsresult& aRv)
-    {
-      // On Sender side, PresentationService::OnSessionFailure() should be called.
-    }
-
-  private:
-    nsString mId;
-    nsCOMPtr<nsIPresentationDevice> mDevice;
-    nsCOMPtr<nsIPresentationControlChannel> mChannel;
-    nsRefPtr<PresentationService> mService;
-  };
-  
-  SessionResponder* mResponder;
 
   nsCOMPtr<nsITimer> mDOMContentLoadedTimer;
 

@@ -9,13 +9,9 @@
 #include "nsIPresentationControlChannel.h"
 #include "nsThreadUtils.h"
 
-#include "mozilla/dom/presentation/PresentationService.h"
-
 namespace mozilla {
 namespace dom {
 namespace presentation {
-
-class PresentationService;
 
 class MockPresentationDevice : public nsIPresentationDevice
 {

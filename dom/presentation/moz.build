@@ -18,7 +18,8 @@ EXPORTS.mozilla.dom.presentation += [
     'PresentationDeviceManager.h',
     'PresentationService.h',
     'PresentationSession.h',
-		'SessionTransport.h'
+		'PresentationSessionTransport.h',
+    'Session.h'
 ]
 
 SOURCES += [
@@ -31,7 +32,8 @@ SOURCES += [
     'PresentationService.cpp',
     'PresentationSession.cpp',
     'PresentationSessionRequest.cpp',
-		'SessionTransport.cpp'
+		'PresentationSessionTransport.cpp',
+    'Session.cpp'
 ]
 
 EXTRA_COMPONENTS += [

@@ -1,0 +1,38 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#include "nsISupports.idl"
+
+/*
+ * The callbacks for session transport events.
+ */
+[scriptable, uuid(9f158786-41a6-4a10-b29b-9497f25d4b67)]
+interface nsIPresentationSessionTransportCallback : nsISupports
+{
+  void onComplete();
+  void onClose(in nsresult reason);
+  void onMessage(in ACString data);
+};
+
+/*
+ * App-to-App transport channel for the presentation session.
+ */
+[scriptable, uuid(d7204f57-0085-4101-b70b-2d2ae4302f6b)]
+interface nsIPresentationSessionTransport : nsISupports
+{
+  // The callback for handling any transport events.
+  attribute nsIPresentationSessionTransportCallback callback;
+
+  /*
+   * send message to remote endpoint
+   */
+  void sendMessage(in ACString data);
+
+  /*
+   * close this session transport
+   * @param reason reason for closing this session transport.
+   */
+  void close(in nsresult reason);
+};
+

@@ -31,3 +31,17 @@ interface nsIPresentationListener : nsISupports
    */
   void notifySessionReady(in DOMString id);
 };
+
+[scriptable, uuid(3b9ae71f-2905-4969-9117-101627c1c2ea)]
+interface nsIPresentationSessionListener : nsISupports
+{
+  const unsigned short STATE_CONNECTED = 0;
+  const unsigned short STATE_DISCONNECTED = 1;
+
+  void notifyStateChange(in DOMString sessionId,
+                         in unsigned short state,
+                         [optional] in nsresult reason);
+
+  void notifyMessage(in DOMString sessionId,
+                     in ACString data);
+};

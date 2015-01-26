@@ -4,16 +4,19 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 
+#ifndef mozilla_dom_presentation_PresentationSessionTransport_h
+#define mozilla_dom_presentation_PresentationSessionTransport_h
+
 namespace mozilla {
 namespace dom {
 namespace presentation {
 
-class SessionTransport MOZ_FINAL: public nsISupports
+class PresentationSessionTransport MOZ_FINAL: public nsISupports
 {
 public:
   NS_DECL_ISUPPORTS
 
-  SessionTransport(const nsAString& aId,
+  PresentationSessionTransport(const nsAString& aId,
                    nsIPresentationControlChannel* aChannel,
                    nsIPresentationDevice* aDevice)
     : mId(aId)
@@ -22,7 +25,7 @@ public:
   {
   }
 
-  ~SessionTransport()
+  ~PresentationSessionTransport()
   {
     mCtrlChannel = nullptr;
     mDevice = nullptr;
@@ -36,3 +39,5 @@ public:
 } // namespace presentation
 } // namespace dom
 } // namespace mozilla
+
+#endif
