@@ -73,7 +73,7 @@ PresentationChild::RecvNotifySessionReady(const nsString& aId)
 {
   MOZ_ASSERT(sPresentationService);
   if (sPresentationService) {
-//    sPresentationService->NotifySessionReady(nsString(aId));
+    sPresentationService->NotifySessionReady(nsString(aId));
   } 
 
   return true;

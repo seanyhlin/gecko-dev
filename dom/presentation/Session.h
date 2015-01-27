@@ -51,10 +51,10 @@ protected:
   virtual ~Session() {}
 
   nsCOMPtr<nsIPresentationSessionTransport> mTransport;
+  nsRefPtr<PresentationService> mService;
 
 private:
   nsString mId;
-  nsRefPtr<PresentationService> mService;
 };
 
 

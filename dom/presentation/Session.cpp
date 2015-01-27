@@ -6,6 +6,9 @@
 #include "Session.h"
 
 #include "nsIServerSocket.h"
+#include "nsIFrameLoader.h"
+#include "nsIObserver.h"
+#include "nsIObserverService.h"
 #include "nsComponentManagerUtils.h"
 #include "nsServiceManagerUtils.h"
 #include "nsIMutableArray.h"
@@ -15,12 +18,18 @@
 #include "nsISupportsPrimitives.h"
 #include "nsIDNSService.h"
 #include "nsIDOMEventListener.h"
+#include "nsIDOMEventTarget.h"
 #include "nsISocketTransport.h"
 #include "nsISocketTransportService.h"
 #include "nsISimpleEnumerator.h"
-#include "nsITimerCallback.h"
+#include "nsITimer.h"
 #include "PresentationSessionTransport.h"
 #include "PresentationService.h"
+#include "mozilla/Services.h"
+#include "mozilla/unused.h"
+#include "nsIPresentationSessionRequest.h"
+
+using namespace mozilla::services;
 
 namespace mozilla {
 namespace dom {
@@ -216,9 +225,12 @@ Requester::OnStopListening(nsIServerSocket* aServerSocket,
   return NS_OK;
 }
 
+#define DOMCONTENTLOADED_EVENT_NAME NS_LITERAL_STRING("DOMContentLoaded")
+
 // Session object with receiver side behavior
 class Responder MOZ_FINAL : public Session
                           , public nsIPresentationControlChannelListener
+                          , public nsIObserver
                           , public nsIDOMEventListener
                           , public nsITimerCallback
 {
@@ -226,33 +238,102 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIPRESENTATIONCONTROLCHANNELLISTENER
   NS_DECL_NSIDOMEVENTLISTENER
+  NS_DECL_NSIOBSERVER
+  NS_DECL_NSITIMERCALLBACK
 
   explicit Responder(const nsAString& aId,
                      PresentationService* aService,
                      nsIPresentationControlChannel* aControlChannel)
     : Session(aId, aService)
     , mControlChannel(aControlChannel)
+    , mTarget(nullptr)
+    , mTimer(nullptr)
+    , isLoaded(false)
   {
+    Init();
   }
 
 private:
   virtual ~Responder() {}
 
+  bool Init();
+
   nsCOMPtr<nsIPresentationControlChannel> mControlChannel;
+  nsCOMPtr<nsIDOMEventTarget> mTarget;
+  nsCOMPtr<nsITimer> mTimer;
+  bool isLoaded;
 };
 
-NS_IMPL_ISUPPORTS_INHERITED0(Responder,
-                             Session)
+NS_IMPL_ISUPPORTS_INHERITED(Responder,
+                            Session,
+                            nsIObserver,
+                            nsITimerCallback,
+                            nsIDOMEventListener)
+
+bool
+Responder::Init()
+{
+  nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
+  if (NS_WARN_IF(!obs)) {
+    return false;
+  }
+
+  obs->AddObserver(this, "presentation-receiver-launched", false);
+  return true;
+}
+
+// nsIObserver
+NS_IMETHODIMP
+Responder::Observe(nsISupports* aSubject,
+                   const char* aTopic,
+                   const char16_t* aData)
+{
+  if (!strcmp(aTopic, "presentation-receiver-launched")) {
+    nsCOMPtr<nsIFrameLoaderOwner> flOwner = do_QueryInterface(aSubject);
+    nsCOMPtr<nsIFrameLoader> frameLoader;
+    if (!flOwner ||
+        NS_FAILED(flOwner->GetFrameLoader(getter_AddRefs(frameLoader))) ||
+        NS_FAILED(frameLoader->ActivateFrameEvent(DOMCONTENTLOADED_EVENT_NAME, false))) {
+      NS_WARNING("Failed to activate frame event");
+      return NS_OK;
+    }
+
+    mTarget = do_QueryInterface(aSubject);
+    if (NS_WARN_IF(!mTarget)) {
+      return NS_OK;
+    }
+    mTarget->AddEventListener(DOMCONTENTLOADED_EVENT_NAME, this, false);
+
+    nsresult rv;
+    mTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
+    if (NS_SUCCEEDED(rv)) {
+      mTimer->InitWithCallback(this, 1000, nsITimer::TYPE_ONE_SHOT);
+    }
+    return NS_OK;
+  }
+
+  MOZ_ASSERT(false, "Unexpected topic for Responder.");
+  return NS_ERROR_UNEXPECTED;
+}
+
+// nsITimerCallback
+NS_IMETHODIMP
+Responder::Notify(nsITimer* aTimer)
+{
+  mTimer = nullptr;
+  if (!isLoaded) {
+    // timeout
+    mControlChannel->Close(NS_OK);
+  }
+  return NS_OK;
+}
+
 
 // nsIPresentationControlChannelListener
 NS_IMETHODIMP
 Responder::NotifyOpened()
 {
-  // TODO open app frame
-
-  // XXX if frame opened successfully
-  mControlChannel->ReceiverReady();
-
+  //XXX do nothing and wait for event DOMContentLoaded
   return NS_OK;
 }
 
@@ -327,7 +408,8 @@ Responder::OnOffer(nsIPresentationChannelDescription* aDescription)
 
   if (!mTransport) {
     // abort the entire procedure if cannot establish session transport
-    mControlChannel->Close(NS_ERROR_FAILURE);
+    // XXX NS_OK / NS_ERROR_FAILURE?
+    mControlChannel->Close(NS_OK);
   }
 
   return NS_OK;
@@ -338,6 +420,22 @@ Responder::OnAnswer(nsIPresentationChannelDescription* aDescription)
 {
   MOZ_ASSERT(false, "receiver side should not receive answer");
   return NS_ERROR_FAILURE;
+}
+
+// nsIDOMEventListener
+NS_IMETHODIMP
+Responder::HandleEvent(nsIDOMEvent* aDOMEvent)
+{
+  isLoaded = true;
+
+  mTimer->Cancel();
+  mTimer = nullptr;
+
+  mControlChannel->ReceiverReady();
+  mService->NotifySessionReady(Id());
+
+  mTarget->RemoveEventListener(DOMCONTENTLOADED_EVENT_NAME, this, false);
+  return NS_OK;
 }
 
 } // anonymous namespace

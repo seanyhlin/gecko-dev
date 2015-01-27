@@ -42,7 +42,7 @@ public:
    * Must called from main thread.
    */
   static PresentationService*
-  Get(); 
+  Get();
 
   /**
    * Start a new presentation session and display a prompt box which asks users
@@ -84,7 +84,7 @@ public:
    */
   virtual void
   RegisterListener(nsIPresentationListener* aListener);
- 
+
   /**
    * Unregister a message handler. Must be called from the main thread.
    */
@@ -120,7 +120,7 @@ public:
 
 protected:
   PresentationService();
-  
+
   virtual
   ~PresentationService();
 
@@ -137,12 +137,24 @@ private:
 
   bool
   Init();
-  
+
   nsresult
   HandleShutdown();
-  
+
+  nsresult
+  HandleDeviceChange();
+
+  nsresult
+  HandleSessionRequest(nsISupports* aSubject);
+
   bool
   FindAppOnDevice(const nsAString& aUrl);
+
+  void
+  ReplyRequestWithError(const nsAString& aId, const nsAString& aError);
+
+  bool
+  GetSessionInfo(const nsAString& aId, SessionInfo** aInfo);
 
   bool mAvailable;
 
@@ -154,8 +166,7 @@ private:
 
     PresentationDeviceRequest(const nsAString& aUrl,
                               const nsAString& aId,
-                              const nsAString& aOrigin,
-                              PresentationService* aService);
+                              const nsAString& aOrigin);
 
   private:
     virtual ~PresentationDeviceRequest();
@@ -163,29 +174,23 @@ private:
     nsString mRequestUrl;
     nsString mId;
     nsString mOrigin;
-    nsRefPtr<PresentationService> mService;
   };
 
   struct SessionInfo
   {
     SessionInfo(nsIPresentationRequestCallback* aCallback)
-      : callback(aCallback)
-    { }
-
-    SessionInfo(nsIPresentationDevice* aDevice)
-      : device(aDevice)
-    { }
-
-    SessionInfo(Session* aSession,
-                nsIPresentationDevice* aDevice,
-                nsIPresentationSessionListener* aListener,
-                nsIPresentationRequestCallback* aCallback)
-      : session(aSession)
-      , device(aDevice)
-      , listener(aListener)
+      : isRequester(true)
       , callback(aCallback)
     { }
 
+    SessionInfo(Session* aSession,
+                nsIPresentationDevice* aDevice)
+      : isRequester(false)
+      , session(aSession)
+      , device(aDevice)
+    { }
+
+    bool isRequester;
     nsRefPtr<Session> session;
     nsCOMPtr<nsIPresentationDevice> device;
     nsCOMPtr<nsIPresentationSessionListener> listener;
@@ -194,15 +199,9 @@ private:
 
   nsClassHashtable<nsStringHashKey, SessionInfo> mSessionInfo;
 
-  SessionInfo*
-  GetSessionInfo(const nsAString& aId);
-
   uint32_t mLastUniqueId;
 
   nsCOMPtr<nsITimer> mDOMContentLoadedTimer;
-
-  // HACK
-  nsCOMPtr<nsITimer> mTimer;
 };
 
 } // namespace presentation
