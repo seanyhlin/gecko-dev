@@ -23,7 +23,7 @@ PresentationChild* sPresentationChild;
 PresentationIPCService::Create()
 {
   ContentChild* contentChild = ContentChild::GetSingleton();
-  if (!NS_WARN_IF(contentChild)) {
+  if (NS_WARN_IF(!contentChild)) {
     return nullptr;
   }
 
@@ -74,11 +74,9 @@ nsresult
 PresentationIPCService::SendRequest(nsIPresentationRequestCallback* aCallback,
                                     const PresentationRequest& aRequest)
 {
-  if (!sPresentationChild) {
-    NS_WARNING("");
-    return NS_ERROR_FAILURE;
+  if (sPresentationChild) {
+    PresentationRequestChild* actor = new PresentationRequestChild(aCallback);
+    sPresentationChild->SendPPresentationRequestConstructor(actor, aRequest);
   }
-  PresentationRequestChild* actor = new PresentationRequestChild(aCallback);
-  sPresentationChild->SendPPresentationRequestConstructor(actor, aRequest);
   return NS_OK;
 }

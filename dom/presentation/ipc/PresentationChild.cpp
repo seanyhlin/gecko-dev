@@ -7,7 +7,6 @@
 #include "mozilla/StaticPtr.h"
 #include "PresentationChild.h"
 #include "PresentationIPCService.h"
-#include "PresentationService.h"
 #include "nsThreadUtils.h"
 
 using namespace mozilla;
@@ -112,15 +111,17 @@ PresentationRequestChild::Recv__delete__(const PresentationResponse& aResponse)
 bool
 PresentationRequestChild::DoResponse(const PresentationSuccessResponse& aResponse)
 {
-  MOZ_ASSERT(mCallback);
-  mCallback->NotifySuccess();
+  if (mCallback) {
+    mCallback->NotifySuccess();
+  }
   return true;
 }
 
 bool
 PresentationRequestChild::DoResponse(const PresentationErrorResponse& aResponse)
 {
-  MOZ_ASSERT(mCallback);
-  mCallback->NotifyError(aResponse.error());
+  if (mCallback) {
+    mCallback->NotifyError(aResponse.error());
+  }
   return true;
 }

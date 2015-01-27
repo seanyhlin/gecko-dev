@@ -65,7 +65,7 @@ public:
   NS_DECL_NSIPRESENTATIONREQUESTCALLBACK
 
 protected:
-  PresentationRequestParent();
+  PresentationRequestParent(PresentationService* aService);
   virtual ~PresentationRequestParent();
 
   virtual void

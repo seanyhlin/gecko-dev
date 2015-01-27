@@ -58,7 +58,7 @@ PPresentationRequestParent*
 PresentationParent::AllocPPresentationRequestParent(
   const PresentationRequest& aRequest)
 {
-  PresentationRequestParent* actor = new PresentationRequestParent();
+  PresentationRequestParent* actor = new PresentationRequestParent(mService);
   NS_ADDREF(actor);
   return actor;
 }
@@ -118,7 +118,8 @@ PresentationParent::NotifySessionReady(const nsAString& aId)
 
 NS_IMPL_ISUPPORTS(PresentationRequestParent, nsIPresentationRequestCallback)
 
-PresentationRequestParent::PresentationRequestParent()
+PresentationRequestParent::PresentationRequestParent(PresentationService* aService)
+  : mService(aService)
 {
 }
 
@@ -129,6 +130,7 @@ PresentationRequestParent::~PresentationRequestParent()
 void
 PresentationRequestParent::ActorDestroy(ActorDestroyReason aWhy)
 {
+  mService = nullptr;
 }
 
 bool
@@ -137,9 +139,9 @@ PresentationRequestParent::DoRequest(const StartSessionRequest& aRequest)
   if (!mService) {
     return false;
   }
- 
-  mService->StartSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin(), this);
-  return true;
+
+  nsresult rv = mService->StartSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin(), this);
+  return NS_SUCCEEDED(rv);
 }
 
 bool
@@ -149,8 +151,8 @@ PresentationRequestParent::DoRequest(const JoinSessionRequest& aRequest)
     return false;
   }
   
-  mService->JoinSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin());
-  return true;
+  nsresult rv = mService->JoinSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin());
+  return NS_SUCCEEDED(rv);
 }
 
 NS_IMETHODIMP
