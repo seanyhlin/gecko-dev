@@ -6,7 +6,9 @@
 
 #include "nsTArray.h"
 #include "mozilla/dom/ContentChild.h"
+#include "mozilla/ipc/InputStreamUtils.h"
 #include "mozilla/StaticPtr.h"
+#include "nsIPresentationRequestCallback.h"
 #include "PresentationChild.h"
 #include "PresentationIPCService.h"
 
@@ -35,21 +37,7 @@ PresentationIPCService::Create()
 
 PresentationIPCService::~PresentationIPCService()
 {
-  mListeners.Clear();
-}
-
-/* virtual */ void
-PresentationIPCService::RegisterListener(nsIPresentationListener* aListener)
-{
-  MOZ_ASSERT(NS_IsMainThread());
-  mListeners.AppendElement(aListener);
-}
-
-/* virtual */ void
-PresentationIPCService::UnregisterListener(nsIPresentationListener* aListener)
-{
-  MOZ_ASSERT(NS_IsMainThread());
-  mListeners.RemoveElement(aListener);
+  mSessionListeners.Clear();
 }
 
 /* virtual */ nsresult
@@ -70,6 +58,34 @@ PresentationIPCService::JoinSessionInternal(const nsAString& aUrl,
   return NS_OK;
 }
 
+/* virtual */ nsresult
+PresentationIPCService::SendMessageInternal(const nsAString& aSessionId,
+                                            nsIInputStream* aStream)
+{
+  if (aSessionId.IsEmpty()) {
+    return NS_ERROR_INVALID_ARG;
+  }
+  NS_ENSURE_ARG(aStream);
+
+  mozilla::ipc::OptionalInputStreamParams stream;
+  nsTArray<mozilla::ipc::FileDescriptor> fds;
+  SerializeInputStream(aStream, stream, fds);
+
+  MOZ_ASSERT(fds.IsEmpty());
+
+  return SendRequest(nullptr, SendMessageRequest(nsString(aSessionId), stream));
+}
+
+/* virtual */ nsresult
+PresentationIPCService::CloseSessionInternal(const nsAString& aSessionId)
+{
+  if (aSessionId.IsEmpty()) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  return SendRequest(nullptr, CloseSessionRequest(nsString(aSessionId)));
+}
+
 nsresult
 PresentationIPCService::SendRequest(nsIPresentationRequestCallback* aCallback,
                                     const PresentationRequest& aRequest)
@@ -79,4 +95,64 @@ PresentationIPCService::SendRequest(nsIPresentationRequestCallback* aCallback,
     sPresentationChild->SendPPresentationRequestConstructor(actor, aRequest);
   }
   return NS_OK;
+}
+
+/* virtual */ void
+PresentationIPCService::RegisterListener(nsIPresentationListener* aListener)
+{
+  MOZ_ASSERT(NS_IsMainThread());
+  mListeners.AppendElement(aListener);
+}
+
+/* virtual */ void
+PresentationIPCService::UnregisterListener(nsIPresentationListener* aListener)
+{
+  MOZ_ASSERT(NS_IsMainThread());
+  mListeners.RemoveElement(aListener);
+}
+
+/* virtual */ void
+PresentationIPCService::RegisterSessionListener(const nsAString& aSessionId,
+                                                nsIPresentationSessionListener* aListener)
+{
+  MOZ_ASSERT(NS_IsMainThread());
+  mSessionListeners.Put(aSessionId, aListener);
+  NS_WARN_IF(!sPresentationChild->SendRegisterSessionHandler(nsString(aSessionId)));
+}
+
+/* virtual */ void
+PresentationIPCService::UnregisterSessionListener(const nsAString& aSessionId,
+                                                  nsIPresentationSessionListener* aListener)
+{
+  MOZ_ASSERT(NS_IsMainThread());
+
+  if (mSessionListeners.GetWeak(aSessionId, nullptr)) {
+    mSessionListeners.Remove(aSessionId);
+    NS_WARN_IF(!sPresentationChild->SendUnregisterSessionHandler(nsString(aSessionId)));
+  }
+}
+
+nsresult
+PresentationIPCService::NotifySessionStateChange(const nsAString& aSessionId,
+                                                 uint16_t aState,
+                                                 nsresult aReason)
+{
+  nsCOMPtr<nsIPresentationSessionListener> listener;
+  if (NS_WARN_IF(!mSessionListeners.Get(aSessionId, getter_AddRefs(listener)))) {
+    return NS_OK;
+  }
+
+  return listener->NotifyStateChange(aSessionId, aState, aReason);
+}
+
+nsresult
+PresentationIPCService::NotifyMessage(const nsAString& aSessionId,
+                                      const nsACString& aData)
+{
+  nsCOMPtr<nsIPresentationSessionListener> listener;
+  if (NS_WARN_IF(!mSessionListeners.Get(aSessionId, getter_AddRefs(listener)))) {
+    return NS_OK;
+  }
+
+  return listener->NotifyMessage(aSessionId, aData);
 }

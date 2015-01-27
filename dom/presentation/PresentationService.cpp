@@ -6,17 +6,15 @@
 #include "MainThreadUtils.h" // NS_IsMainThread
 #include "nsCRTGlue.h" // NS_strcmp
 #include "nsIAppsService.h"
-#include "nsIArray.h"
 #include "nsIDOMEventListener.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIDOMTCPSocket.h"
 #include "nsIObserverService.h"
 #include "nsIPresentationControlChannel.h"
-#include "nsIPresentationDevice.h" // nsIPresentationDevice
 #include "nsIPresentationDeviceManager.h" // Topic
+#include "nsITimer.h"
 #include "nsPrintfCString.h"
 #include "nsServiceManagerUtils.h" // do_GetService
-#include "nsString.h"
 #include "nsXULAppAPI.h" // XRE_GetProcessType
 #include "Presentation.h"
 #include "PresentationService.h"
@@ -82,10 +80,8 @@ PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aD
   NS_ENSURE_ARG(aDevice);
 
   // Update SesisonInfo.device when user selects a device.
-  SessionInfo* info;
-  if (!sPresentationService->GetSessionInfo(mId, &info)) {
-    return NS_OK;
-  }
+  SessionInfo* info = sPresentationService->mSessionInfo.Get(mId);
+  NS_ENSURE_TRUE(info, NS_OK);
   info->device = aDevice;
 
   // Establish control channel. If we failed to do so, the callback is called
@@ -150,7 +146,6 @@ PresentationService::Create()
 PresentationService::PresentationService()
   : mAvailable(false)
   , mSessionInfo(128)
-  , mLastUniqueId(0)
 {
   NS_WARN_IF_FALSE(Init(), "Failed to initialize PresentationService.");
 }
@@ -224,11 +219,6 @@ PresentationService::NotifySessionReady(const nsAString& aId)
   }
 }
 
-void
-PresentationService::NotifyStateChange(bool aConnected)
-{
-  // TODO
-}
 nsresult
 PresentationService::HandleDeviceChange()
 {
@@ -316,22 +306,19 @@ PresentationService::FindAppOnDevice(const nsAString& aUrl)
   return true;
 }
 
-void
+nsresult
 PresentationService::ReplyRequestWithError(const nsAString& aId,
                                            const nsAString& aError)
 {
-  SessionInfo* info;
-  if (!GetSessionInfo(aId, &info)) {
-    return;
-  }
+  SessionInfo* info = mSessionInfo.Get(aId);
+  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
+  NS_ENSURE_TRUE(info->callback, NS_ERROR_NOT_AVAILABLE);
 
-  if (!info->callback) {
-    NS_WARNING("Failed to get request callback");
-    return;
-  }
+  nsresult rv = info->callback->NotifyError(aError);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  info->callback->NotifyError(aError);
   info->callback = nullptr;
+  return NS_OK;
 }
 
 /* virtual */ nsresult
@@ -381,6 +368,40 @@ PresentationService::JoinSessionInternal(const nsAString& aUrl,
   return NS_OK;
 }
 
+/* virtual */ nsresult
+PresentationService::SendMessageInternal(const nsAString& aSessionId,
+                                         nsIInputStream* aStream)
+{
+  MOZ_ASSERT(NS_IsMainThread());
+
+  if (aSessionId.IsEmpty()) {
+    return NS_ERROR_INVALID_ARG;
+  }
+  NS_ENSURE_ARG(aStream);
+
+  SessionInfo* info = mSessionInfo.Get(aSessionId);
+  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
+  NS_ENSURE_TRUE(info->session, NS_ERROR_NOT_AVAILABLE);
+
+  return info->session->Send(aStream);
+}
+
+/* virtual */ nsresult
+PresentationService::CloseSessionInternal(const nsAString& aSessionId)
+{
+  MOZ_ASSERT(NS_IsMainThread());
+
+  if (aSessionId.IsEmpty()) {
+    return NS_ERROR_INVALID_ARG;
+  }
+
+  SessionInfo* info = mSessionInfo.Get(aSessionId);
+  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
+  NS_ENSURE_TRUE(info->session, NS_ERROR_NOT_AVAILABLE);
+
+  return info->session->Close(NS_OK);
+}
+
 /* virtual */ void
 PresentationService::RegisterListener(nsIPresentationListener* aListener)
 {
@@ -395,91 +416,106 @@ PresentationService::UnregisterListener(nsIPresentationListener* aListener)
   mListeners.RemoveElement(aListener);
 }
 
-void
-PresentationService::GenerateUniqueId(nsAString& aId)
+/* virtual */ void
+PresentationService::RegisterSessionListener(const nsAString& aSessionId,
+                                             nsIPresentationSessionListener* aListener)
 {
-  aId = NS_ConvertUTF8toUTF16(nsPrintfCString("%16lu", ++mLastUniqueId));
+  MOZ_ASSERT(NS_IsMainThread());
+  NS_WARN_IF(!aListener);
+
+  SessionInfo* info = mSessionInfo.Get(aSessionId);
+  NS_ENSURE_TRUE_VOID(info);
+
+  info->listener = aListener;
+  NS_ENSURE_TRUE_VOID(info->listener);
 }
 
-bool
-PresentationService::GetSessionInfo(const nsAString& aId, SessionInfo** aInfo)
+/* virtual */ void
+PresentationService::UnregisterSessionListener(const nsAString& aSessionId,
+                                               nsIPresentationSessionListener* aListener)
 {
-  if (!mSessionInfo.Get(aId, aInfo)) {
-    NS_WARNING("Failed to get sesison info");
-    return false;
-  }
-  return true;
+  MOZ_ASSERT(NS_IsMainThread());
+
+  SessionInfo* info = mSessionInfo.Get(aSessionId);
+  NS_ENSURE_TRUE_VOID(info);
+
+  info->listener = nullptr;
 }
 
-void
+nsresult
 PresentationService::OnSessionComplete(Session* aSession)
 {
   MOZ_ASSERT(NS_IsMainThread());
-  MOZ_ASSERT(aSession);
+  NS_ENSURE_ARG_POINTER(aSession);
 
-  SessionInfo* info;
-  if (!GetSessionInfo(aSession->Id(), &info)) {
-    return;
-  }
+  SessionInfo* info = mSessionInfo.Get(aSession->Id());
+  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
 
-  // Session transport has been established, so notify listener of the state
+  // Session transport has been established, so notify the listener of the state
   // change and invoke callback if any.
-  if (info->listener) {
-    info->listener->NotifyStateChange(aSession->Id(),
-                                      (uint16_t)PresentationSessionState::Connected,
-                                      NS_OK);
+  nsCOMPtr<nsIPresentationSessionListener> listener = info->listener;
+  NS_WARN_IF(!listener);
+  if (listener) {
+    nsresult rv = listener->NotifyStateChange(aSession->Id(),
+                                              nsIPresentationSessionListener::STATE_CONNECTED,
+                                              NS_OK);
+    NS_ENSURE_SUCCESS(rv, rv);
   }
 
   if (info->callback) {
-    info->callback->NotifySuccess();
+    return info->callback->NotifySuccess();
   }
+
+  return NS_OK;
 }
 
-void
+nsresult
 PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
 {
   MOZ_ASSERT(NS_IsMainThread());
-  MOZ_ASSERT(aSession);
+  NS_ENSURE_ARG_POINTER(aSession);
 
-  SessionInfo* info;
-  if (!GetSessionInfo(aSession->Id(), &info)) {
-    return;
-  }
+  SessionInfo* info = mSessionInfo.Get(aSession->Id());
+  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
 
   // The session is closed, so notify session listeners.
-  if (info->listener) {
-    info->listener->NotifyStateChange(aSession->Id(),
-                                      (uint16_t)PresentationSessionState::Disconnected,
-                                      aReason);
+  nsCOMPtr<nsIPresentationSessionListener> listener = info->listener;
+  NS_WARN_IF(!listener);
+  if (listener) {
+    nsresult rv = listener->NotifyStateChange(aSession->Id(),
+                                              nsIPresentationSessionListener::STATE_DISCONNECTED,
+                                              aReason);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     info->listener = nullptr;
   }
 
-  // Keep the session info
+  // Keep the session info.
   if (NS_FAILED(aReason)) {
     info->session = nullptr;
     info->callback = nullptr;
-    return;
+    return NS_OK;
   }
 
   if (!info->isRequester) {
     info->session = nullptr;
     info->device = nullptr;
-    mSessionInfo.Remove(aSession->Id());
   } else {
-    MOZ_ASSERT(info->callback);
     ReplyRequestWithError(aSession->Id(), NS_LITERAL_STRING("FailedToEstablishSession"));
   }
   mSessionInfo.Remove(aSession->Id());
+
+  return NS_OK;
 }
 
-void
+nsresult
 PresentationService::OnSessionMessage(Session* aSession, const nsACString& aMessage)
 {
-  SessionInfo* info;
-  if (!GetSessionInfo(aSession->Id(), &info)) {
-    return;
-  }
-  MOZ_ASSERT(info->listener);
+  NS_ENSURE_ARG_POINTER(aSession);
 
-  info->listener->NotifyMessage(aSession->Id(), aMessage);
+  SessionInfo* info = mSessionInfo.Get(aSession->Id());
+  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
+  NS_ENSURE_TRUE(info->listener, NS_ERROR_NOT_AVAILABLE);
+
+  return info->listener->NotifyMessage(aSession->Id(), aMessage);
 }

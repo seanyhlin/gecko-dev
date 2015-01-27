@@ -7,6 +7,8 @@
 include protocol PContent;
 include protocol PPresentationRequest;
 
+include InputStreamParams;
+
 namespace mozilla {
 namespace dom {
 namespace presentation {
@@ -25,10 +27,23 @@ struct JoinSessionRequest
   nsString origin;
 };
 
+struct SendMessageRequest
+{
+  nsString sessionId;
+  InputStreamParams data;
+};
+
+struct CloseSessionRequest
+{
+  nsString sessionId;
+};
+
 union PresentationRequest
 {
   StartSessionRequest;
   JoinSessionRequest;
+  SendMessageRequest;
+  CloseSessionRequest;
 };
 
 sync protocol PPresentation
@@ -39,13 +54,18 @@ sync protocol PPresentation
 child:
   NotifyAvailableChange(bool aAvailable);
   NotifySessionReady(nsString aId);
+  NotifySessionStateChange(nsString aSessionId, uint16_t aState, nsresult aReason);
+  NotifyMessage(nsString aSessionId, nsCString aData);
 
 parent:
   __delete__();
 
   RegisterHandler();
   UnregisterHandler();
-  
+
+  RegisterSessionHandler(nsString aSessionId);
+  UnregisterSessionHandler(nsString aSessionId);
+
   PPresentationRequest(PresentationRequest aRequest);
 };
 

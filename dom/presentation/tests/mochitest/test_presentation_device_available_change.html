@@ -20,7 +20,7 @@ function testEnd() {
 }
 
 function testAvailability() {
-  var presentation = navigator.presentation;
+  var presentation = navigator.mozPresentation;
   var available = presentation.available;
 	ok(!available, " There should be no device ! ");
 
@@ -32,8 +32,8 @@ function testAvailability() {
 			ok(true, "StartSession with last SessionId resolved.");
 //      testEnd();
 		},
-    function onRejected() {
-      ok(false, "StartSession with last SessionId rejected.");
+    function onRejected(error) {
+      ok(false, "StartSession with last SessionId rejected. " + error);
       testEnd();
     }
   );

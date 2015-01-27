@@ -37,14 +37,14 @@ public:
     return mId;
   }
 
-  void Send(nsIInputStream* aData);
-  void Close(nsresult aReason);
+  nsresult Send(nsIInputStream* aData);
+  nsresult Close(nsresult aReason);
 
 protected:
   explicit Session(const nsAString& aId,
                    PresentationService* aService)
-    : mId(aId)
-    , mService(aService)
+    : mService(aService)
+    , mId(aId)
   {
   }
 

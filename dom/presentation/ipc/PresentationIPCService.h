@@ -9,6 +9,7 @@
 
 #include "mozilla/Attributes.h"
 #include "nsAutoPtr.h"
+#include "nsRefPtrHashtable.h"
 #include "PresentationService.h"
 
 namespace mozilla {
@@ -33,19 +34,45 @@ public:
                       const nsAString& aSessionId,
                       const nsAString& aOrigin);
 
+  virtual nsresult
+  SendMessageInternal(const nsAString& aSessionId,
+                      nsIInputStream* aStream);
+
+  virtual nsresult
+  CloseSessionInternal(const nsAString& aSessionId);
+
   virtual void
   RegisterListener(nsIPresentationListener* aListener);
 
   virtual void
   UnregisterListener(nsIPresentationListener* aListener);
 
+  virtual void
+  RegisterSessionListener(const nsAString& aSessionId,
+                          nsIPresentationSessionListener* aListener);
+
+  virtual void
+  UnregisterSessionListener(const nsAString& aSessionId,
+                            nsIPresentationSessionListener* aListener);
+
+  nsresult
+  NotifySessionStateChange(const nsAString& aSessionId,
+                           uint16_t aState,
+                           nsresult aReason);
+
+  nsresult
+  NotifyMessage(const nsAString& aSessionId,
+                const nsACString& aData);
+
 private:
   PresentationIPCService() { }
-  virtual ~PresentationIPCService();
+  ~PresentationIPCService();
 
   nsresult
   SendRequest(nsIPresentationRequestCallback* aCallback,
               const PresentationRequest& aRequest);
+
+  nsRefPtrHashtable<nsStringHashKey, nsIPresentationSessionListener> mSessionListeners;
 };
 
 } // namespace presentation

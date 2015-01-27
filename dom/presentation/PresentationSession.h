@@ -7,29 +7,33 @@
 #ifndef mozilla_dom_presentation_PresentationSession_h
 #define mozilla_dom_presentation_PresentationSession_h
 
-#include "mozilla/Attributes.h"
 #include "mozilla/DOMEventTargetHelper.h"
-#include "mozilla/ErrorResult.h"
+// Include PresentationSessionBinding.h since enum PresentationSessionState
+// can't be forward declared.
 #include "mozilla/dom/PresentationSessionBinding.h"
 #include "nsCycleCollectionParticipant.h"
-#include "nsWrapperCache.h"
-
-struct JSContext;
+#include "nsIPresentationRequestCallback.h"
 
 namespace mozilla {
 namespace dom {
-class StringOrBlobOrArrayBufferOrArrayBufferView;
 
 namespace presentation {
 
 class PresentationSession MOZ_FINAL : public DOMEventTargetHelper
+                                    , public nsIPresentationSessionListener
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_CYCLE_COLLECTION_CLASS_INHERITED(PresentationSession,
+                                           DOMEventTargetHelper)
+  NS_DECL_NSIPRESENTATIONSESSIONLISTENER
+
+  static already_AddRefed<PresentationSession> Create(nsPIDOMWindow* aWindow,
+                                                      const nsAString& aId);
 
   virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE;
 
-  explicit PresentationSession(nsPIDOMWindow* aWindow, const nsAString& aId);
+  nsresult SetState(PresentationSessionState aState);
 
   // WebIDL (public APIs)
 
@@ -37,20 +41,29 @@ public:
 
   PresentationSessionState State() const;
 
-  IMPL_EVENT_HANDLER(statechange);
-
-  void Send(const StringOrBlobOrArrayBufferOrArrayBufferView& data,
+  void Send(const nsAString& aData,
             ErrorResult& aRv);
-
-  IMPL_EVENT_HANDLER(message);
 
   void Disconnect(ErrorResult& aRv);
 
+  IMPL_EVENT_HANDLER(statechange);
+  IMPL_EVENT_HANDLER(message);
+
 private:
-  virtual ~PresentationSession();
+  PresentationSession(nsPIDOMWindow* aWindow,
+                      const nsAString& aId);
+
+  ~PresentationSession();
+
+  bool Init();
+
+  void Shutdown();
+
+  nsresult DispatchMessageEvent(JS::Handle<JS::Value> aData);
 
   nsString mId;
   PresentationSessionState mState;
+  nsString mOrigin;
 };
 
 } // namespace presentation

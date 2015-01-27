@@ -78,6 +78,31 @@ PresentationChild::RecvNotifySessionReady(const nsString& aId)
   return true;
 }
 
+bool
+PresentationChild::RecvNotifySessionStateChange(const nsString& aSessionId,
+                                                const uint16_t& aState,
+                                                const nsresult& aReason)
+{
+  MOZ_ASSERT(sPresentationService);
+  if (sPresentationService) {
+    sPresentationService->NotifySessionStateChange(aSessionId, aState, aReason);
+  }
+
+  return true;
+}
+
+bool
+PresentationChild::RecvNotifyMessage(const nsString& aSessionId,
+                                     const nsCString& aData)
+{
+  MOZ_ASSERT(sPresentationService);
+  if (sPresentationService) {
+    sPresentationService->NotifyMessage(aSessionId, aData);
+  }
+
+  return true;
+}
+
 // PresentationRequestChild
 
 PresentationRequestChild::PresentationRequestChild(nsIPresentationRequestCallback* aCallback)

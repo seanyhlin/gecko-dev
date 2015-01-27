@@ -463,20 +463,22 @@ Session::CreateResponder(const nsAString& aId,
   return responder.forget();
 }
 
-void
+nsresult
 Session::Send(nsIInputStream* aData)
 {
-  MOZ_ASSERT(mTransport);
+  NS_ENSURE_TRUE(mTransport, NS_ERROR_NOT_AVAILABLE);
 
-  mTransport->Send(aData);
+  return mTransport->Send(aData);
 }
 
-void
+nsresult
 Session::Close(nsresult aReason)
 {
   if (mTransport) {
-    mTransport->Close(aReason);
+    return mTransport->Close(aReason);
   }
+
+  return NS_OK;
 }
 
 // nsIPresentationSessionTransportCallback

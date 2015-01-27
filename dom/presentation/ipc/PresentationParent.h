@@ -17,12 +17,14 @@ namespace presentation {
 
 class PresentationService;
 
-class PresentationParent MOZ_FINAL: public PPresentationParent
-                                  , public nsIPresentationListener
+class PresentationParent MOZ_FINAL : public PPresentationParent
+                                   , public nsIPresentationListener
+                                   , public nsIPresentationSessionListener
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIPRESENTATIONLISTENER
+  NS_DECL_NSIPRESENTATIONSESSIONLISTENER
 
   PresentationParent();
 
@@ -47,6 +49,12 @@ public:
 
   virtual bool
   RecvUnregisterHandler() MOZ_OVERRIDE;
+
+  virtual bool
+  RecvRegisterSessionHandler(const nsString& aSessionId) MOZ_OVERRIDE;
+
+  virtual bool
+  RecvUnregisterSessionHandler(const nsString& aSessionId) MOZ_OVERRIDE;
 
   bool
   Init(PresentationService* aService);
@@ -79,10 +87,16 @@ private:
 
   bool
   DoRequest(const StartSessionRequest& aRequest);
-  
+
   bool
   DoRequest(const JoinSessionRequest& aRequest);
-  
+
+  bool
+  DoRequest(const SendMessageRequest& aRequest);
+
+  bool
+  DoRequest(const CloseSessionRequest& aRequest);
+
   nsRefPtr<PresentationService> mService;
 };
 

@@ -13,14 +13,11 @@
 #include "nsIPresentationRequestCallback.h"
 #include "nsIPresentationDevice.h"
 #include "nsIPresentationDevicePrompt.h" // nsIPresentationDeviceRequest
-#include "nsIServerSocket.h"
 #include "nsTObserverArray.h"
 #include "mozilla/dom/presentation/Session.h"
 
-#include "PresentationSessionTransport.h"
-
-// HACK
-#include "nsITimer.h"
+class nsIInputStream;
+class nsITimer;
 
 namespace mozilla {
 namespace dom {
@@ -79,6 +76,13 @@ public:
                       const nsAString& aId,
                       const nsAString& aOrigin);
 
+  virtual nsresult
+  SendMessageInternal(const nsAString& aSessionId,
+                      nsIInputStream* aStream);
+
+  virtual nsresult
+  CloseSessionInternal(const nsAString& aSessionId);
+
   /**
    * Register a message handler. Must be called from the main thread.
    */
@@ -91,8 +95,19 @@ public:
   virtual void
   UnregisterListener(nsIPresentationListener* aListener);
 
-  void
-  GenerateUniqueId(nsAString& aId);
+  /**
+   * Register a session listener. Must be called from the main thread.
+   */
+  virtual void
+  RegisterSessionListener(const nsAString& aSessionId,
+                          nsIPresentationSessionListener* aListener);
+
+  /**
+   * Unregister a session listener. Must be called from the main thread.
+   */
+  virtual void
+  UnregisterSessionListener(const nsAString& aSessionId,
+                            nsIPresentationSessionListener* aListener);
 
   /**
    * Notify registered listeners of the change of device availablility.
@@ -106,16 +121,13 @@ public:
   void
   NotifySessionReady(const nsAString& aId);
 
-  void
-  NotifyStateChange(bool aConnected);
-
-  void
+  nsresult
   OnSessionComplete(Session* aSession);
 
-  void
+  nsresult
   OnSessionClose(Session* aSession, nsresult aReason);
 
-  void
+  nsresult
   OnSessionMessage(Session* aSession, const nsACString& aMessage);
 
 protected:
@@ -150,11 +162,8 @@ private:
   bool
   FindAppOnDevice(const nsAString& aUrl);
 
-  void
+  nsresult
   ReplyRequestWithError(const nsAString& aId, const nsAString& aError);
-
-  bool
-  GetSessionInfo(const nsAString& aId, SessionInfo** aInfo);
 
   bool mAvailable;
 
@@ -198,8 +207,6 @@ private:
   };
 
   nsClassHashtable<nsStringHashKey, SessionInfo> mSessionInfo;
-
-  uint32_t mLastUniqueId;
 
   nsCOMPtr<nsITimer> mDOMContentLoadedTimer;
 };

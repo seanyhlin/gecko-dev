@@ -6,6 +6,7 @@
 
 #include "Presentation.h"
 #include "nsIPresentationDeviceManager.h"
+#include "nsIUUIDGenerator.h"
 #include "mozilla/dom/PresentationBinding.h"
 #include "mozilla/dom/Promise.h"
 #include "PresentationService.h"
@@ -55,8 +56,17 @@ StartSessionCallback::NotifySuccess()
 {
   LOG("StartSessionCallback::NotifySuccess");
   MOZ_ASSERT(NS_IsMainThread());
-  nsRefPtr<PresentationSession> session = new PresentationSession(mWindow,
-                                                                  mId);
+  nsRefPtr<PresentationSession> session = PresentationSession::Create(mWindow,
+                                                                      mId);
+  if (!session) {
+    mPromise->MaybeReject(NS_ERROR_DOM_ABORT_ERR);
+    return NS_ERROR_DOM_ABORT_ERR;
+  }
+
+  // At the sender side, this function must get called after the transport
+  // channel is ready. So we simply set the session state as connected.
+  session->SetState(PresentationSessionState::Connected);
+
   nsAutoString id;
   session->GetId(id);
   LOG("id: %s\n", NS_ConvertUTF16toUTF8(id).get());
@@ -80,7 +90,8 @@ NS_IMPL_CYCLE_COLLECTION_INHERITED(Presentation, DOMEventTargetHelper, mSession)
 NS_IMPL_ADDREF_INHERITED(Presentation, DOMEventTargetHelper)
 NS_IMPL_RELEASE_INHERITED(Presentation, DOMEventTargetHelper)
 
-NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(Presentation)
+NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(Presentation)
+  NS_INTERFACE_MAP_ENTRY(nsIPresentationListener)
 NS_INTERFACE_MAP_END_INHERITING(DOMEventTargetHelper)
 
 /* static */ already_AddRefed<Presentation>
@@ -170,7 +181,18 @@ Presentation::StartSession(const nsAString& aUrl,
   if (aId.WasPassed()) {
     id = aId.Value();
   } else {
-    service->GenerateUniqueId(id);
+    nsCOMPtr<nsIUUIDGenerator> uuidgen =
+      do_GetService("@mozilla.org/uuid-generator;1");
+    if(NS_WARN_IF(!uuidgen)) {
+      promise->MaybeReject(NS_ERROR_NOT_AVAILABLE);
+      return promise.forget();
+    }
+
+    nsID uuid;
+    uuidgen->GenerateUUIDInPlace(&uuid);
+    char buffer[NSID_LENGTH];
+    uuid.ToProvidedString(buffer);
+    CopyASCIItoUTF16(buffer, id);
   }
 
   nsCOMPtr<nsIPresentationRequestCallback> callback =
@@ -244,7 +266,9 @@ NS_IMETHODIMP
 Presentation::NotifySessionReady(const nsAString& aId)
 {
   LOG("Presentation::NotifySessionReady\n");
-  mSession = new PresentationSession(GetOwner(), aId);
+  mSession = PresentationSession::Create(GetOwner(), aId);
+  NS_ENSURE_TRUE(mSession, NS_ERROR_DOM_ABORT_ERR);
+
   DispatchTrustedEvent(SESSIONREADY_EVENT_NAME);
   return NS_OK;
 }

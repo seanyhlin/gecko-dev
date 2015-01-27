@@ -33,22 +33,22 @@ interface PresentationSession : EventTarget {
    * It is called when session state changes. New value is dispatched with
    * the event.
    */
-           attribute EventHandler onstatechange;
+  attribute EventHandler onstatechange;
 
   /**
    * This function is useful only if |state == 'connected'|.
    */
   [Throws]
-  void send((DOMString or Blob or ArrayBuffer or ArrayBufferView) data);
+  void send(DOMString data);
 
   /**
    * This function is useful only if |state == 'connected'|.
    */
   [Throws]
-   void disconnect();
+  void disconnect();
 
   /**
    * It is called when receiving messages. 
    */
-           attribute EventHandler onmessage;
+  attribute EventHandler onmessage;
 };

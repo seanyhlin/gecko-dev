@@ -47,7 +47,7 @@ EXTRA_JS_MODULES += [
 
 IPDL_SOURCES += [
     'ipc/PPresentation.ipdl',
-		'ipc/PPresentationRequest.ipdl'
+    'ipc/PPresentationRequest.ipdl'
 ]
 
 FAIL_ON_WARNINGS = True

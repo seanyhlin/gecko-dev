@@ -38,6 +38,15 @@ public:
   virtual bool
   RecvNotifySessionReady(const nsString& aId) MOZ_OVERRIDE;
 
+  virtual bool
+  RecvNotifySessionStateChange(const nsString& aSessionId,
+                               const uint16_t& aState,
+                               const nsresult& aReason) MOZ_OVERRIDE;
+
+  virtual bool
+  RecvNotifyMessage(const nsString& aSessionId,
+                    const nsCString& aData) MOZ_OVERRIDE;
+
 private:
   bool mActorDestroyed;
 };
