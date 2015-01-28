@@ -26,13 +26,7 @@
 #include "mozilla/dom/presentation/PresentationIPCService.h"
 #include "mozilla/unused.h"
 
-#undef LOG
-#if defined(MOZ_WIDGET_GONK)
-#include <android/log.h>
-#define LOG(args...) __android_log_print(ANDROID_LOG_INFO, "GonkDBus", args);
-#else
-#define LOG(args...) printf(args);
-#endif
+#include "FakePresentationDevice.h"
 
 using namespace mozilla;
 using namespace mozilla::dom;
@@ -75,13 +69,15 @@ PresentationService::PresentationDeviceRequest::GetRequestURL(nsAString& aReques
 NS_IMETHODIMP
 PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aDevice)
 {
-  LOG("PresentationDeviceRequest::Select\n");
+  printf("PresentationDeviceRequest::Select\n");
   MOZ_ASSERT(NS_IsMainThread());
   NS_ENSURE_ARG(aDevice);
 
   // Update SesisonInfo.device when user selects a device.
-  SessionInfo* info = sPresentationService->mSessionInfo.Get(mId);
-  NS_ENSURE_TRUE(info, NS_OK);
+  SessionInfo* info;
+  if (!sPresentationService->mSessionInfo.Get(mId, &info)) {
+    return NS_OK;
+  }
   info->device = aDevice;
 
   // Establish control channel. If we failed to do so, the callback is called
@@ -91,10 +87,15 @@ PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aD
                                                  getter_AddRefs(ctrlChannel)))) {
     sPresentationService->ReplyRequestWithError(mId,NS_LITERAL_STRING("NoControlChannel"));
     sPresentationService->mSessionInfo.Remove(mId);
+    return NS_OK;
   }
 
-   // Create requester and then update SessionInfo.
+  // Create requester and then update SessionInfo.
   info->session = Session::CreateRequester(mId, sPresentationService, ctrlChannel);
+
+  // HACK
+//  info->session->OnClose(NS_OK);
+  info->session->OnComplete();
 
   return NS_OK;
 }
@@ -139,7 +140,6 @@ PresentationService::Create()
     return PresentationIPCService::Create();
   }
 
-  LOG("Parent\n");
   return new PresentationService();
 }
 
@@ -311,12 +311,16 @@ nsresult
 PresentationService::ReplyRequestWithError(const nsAString& aId,
                                            const nsAString& aError)
 {
+  printf("ReplyRequestWithError\n");
   SessionInfo* info = mSessionInfo.Get(aId);
-  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
-  NS_ENSURE_TRUE(info->callback, NS_ERROR_NOT_AVAILABLE);
+  if (NS_WARN_IF(!info)) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
 
-  nsresult rv = info->callback->NotifyError(aError);
-  NS_ENSURE_SUCCESS(rv, rv);
+  if (NS_WARN_IF(!info->callback) ||
+      NS_WARN_IF(NS_FAILED(info->callback->NotifyError(aError)))) {
+    return NS_ERROR_FAILURE;
+  }
 
   info->callback = nullptr;
   return NS_OK;
@@ -328,14 +332,14 @@ PresentationService::StartSessionInternal(const nsAString& aUrl,
                                           const nsAString& aOrigin,
                                           nsIPresentationRequestCallback* aCallback)
 {
-  LOG("StartSessionInternal\n");
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(aCallback);
 
-  if (!mAvailable) {
+  // HACK
+/*  if (!mAvailable) {
     aCallback->NotifyError(NS_LITERAL_STRING("NoAvailableDevice"));
     return NS_OK;
-  }
+  }*/
 
   // Create SessionInfo and set SessionInfo.callback. The callback is called
   // when the request is finished.
@@ -346,12 +350,19 @@ PresentationService::StartSessionInternal(const nsAString& aUrl,
   nsCOMPtr<nsIPresentationDeviceRequest> request =
     new PresentationDeviceRequest(aUrl, aId, aOrigin);
 
-  nsCOMPtr<nsIPresentationDevicePrompt> prompt =
+  // HACK
+/*  nsCOMPtr<nsIPresentationDevicePrompt> prompt =
     do_GetService(PRESENTATION_DEVICE_PROMPT_CONTRACTID);
   if (NS_WARN_IF(!prompt)) {
     return NS_ERROR_FAILURE;
   }
-  prompt->PromptDeviceSelection(request);
+  prompt->PromptDeviceSelection(request);*/
+
+  nsCOMPtr<nsIPresentationDevice> mock = new MockPresentationDevice();
+//  request->Cancel();
+  request->Select(mock);
+  return NS_OK;
+
 
   return NS_OK;
 }
@@ -362,9 +373,11 @@ PresentationService::JoinSessionInternal(const nsAString& aUrl,
                                          const nsAString& aOrigin)
 {
   MOZ_ASSERT(NS_IsMainThread());
-  // FIXME
-/*  nsCOMPtr<nsIPresentationDeviceRequest> request =
-    new PresentationDeviceRequest(aUrl, aOrigin, nullptr);*/
+
+  SessionInfo* info = mSessionInfo.Get(aSessionId);
+  if (NS_WARN_IF(!info)) {
+    return NS_ERROR_FAILURE;
+  }
 
   return NS_OK;
 }
@@ -381,6 +394,9 @@ PresentationService::SendMessageInternal(const nsAString& aSessionId,
   NS_ENSURE_ARG(aStream);
 
   SessionInfo* info = mSessionInfo.Get(aSessionId);
+  if (NS_WARN_IF(!info)) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
   NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
   NS_ENSURE_TRUE(info->session, NS_ERROR_NOT_AVAILABLE);
 
@@ -425,7 +441,9 @@ PresentationService::RegisterSessionListener(const nsAString& aSessionId,
   NS_WARN_IF(!aListener);
 
   SessionInfo* info = mSessionInfo.Get(aSessionId);
-  NS_ENSURE_TRUE_VOID(info);
+  if (NS_WARN_IF(!info)) {
+    return;
+  }
 
   info->listener = aListener;
   NS_ENSURE_TRUE_VOID(info->listener);
@@ -447,7 +465,9 @@ PresentationService::UnregisterSessionListener(const nsAString& aSessionId,
   MOZ_ASSERT(NS_IsMainThread());
 
   SessionInfo* info = mSessionInfo.Get(aSessionId);
-  NS_ENSURE_TRUE_VOID(info);
+  if (NS_WARN_IF(!info)) {
+    return;
+  }
 
   info->listener = nullptr;
 }
@@ -455,11 +475,14 @@ PresentationService::UnregisterSessionListener(const nsAString& aSessionId,
 nsresult
 PresentationService::OnSessionComplete(Session* aSession)
 {
+  printf("OnSessionComplete\n");
   MOZ_ASSERT(NS_IsMainThread());
   NS_ENSURE_ARG_POINTER(aSession);
 
   SessionInfo* info = mSessionInfo.Get(aSession->Id());
-  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
+  if (NS_WARN_IF(!info)) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
 
   info->isSessionComplete = true;
 
@@ -484,11 +507,14 @@ PresentationService::OnSessionComplete(Session* aSession)
 nsresult
 PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
 {
+  printf("OnSessionClose\n");
   MOZ_ASSERT(NS_IsMainThread());
   NS_ENSURE_ARG_POINTER(aSession);
 
   SessionInfo* info = mSessionInfo.Get(aSession->Id());
-  NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
+  if (NS_WARN_IF(!info)) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
 
   // The session is closed, so notify session listeners.
   nsCOMPtr<nsIPresentationSessionListener> listener = info->listener;

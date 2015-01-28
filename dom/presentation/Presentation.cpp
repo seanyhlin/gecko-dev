@@ -14,37 +14,51 @@
 #define AVAILABLECHANGE_EVENT_NAME NS_LITERAL_STRING("availablechange")
 #define SESSIONREADY_EVENT_NAME NS_LITERAL_STRING("sessionready")
 
-#undef LOG
-#if defined(MOZ_WIDGET_GONK)
-#include <android/log.h>
-#define LOG(args...) __android_log_print(ANDROID_LOG_INFO, "GonkDBus", args);
-#else
-#define LOG(args...) printf(args);
-#endif
-
 using namespace mozilla;
 using namespace mozilla::dom;
 using namespace mozilla::dom::presentation;
 
-// StartSessionCallback
+// SessionCallback
 
-NS_IMPL_ISUPPORTS(StartSessionCallback, nsIPresentationRequestCallback)
+class SessionCallback : public nsIPresentationRequestCallback
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIPRESENTATIONREQUESTCALLBACK
 
-StartSessionCallback::StartSessionCallback(Presentation* aPresentation,
-                                           const nsAString& aUrl,
-                                           const nsAString& aId,
-                                           const nsAString& aOrigin,
-                                           Promise* aPromise,
-                                           nsPIDOMWindow* aWindow)
+  SessionCallback(Presentation* aPresentation,
+                  const nsAString& aUrl,
+                  const nsAString& aId,
+                  const nsAString& aOrigin,
+                  Promise* aPromise,
+                  nsPIDOMWindow* aWindow);
+
+private:
+  virtual ~SessionCallback();
+
+  nsRefPtr<Presentation> mPresentation;
+  nsString mId;
+  nsRefPtr<Promise> mPromise;
+  nsCOMPtr<nsPIDOMWindow> mWindow;
+};
+
+NS_IMPL_ISUPPORTS(SessionCallback, nsIPresentationRequestCallback)
+
+SessionCallback::SessionCallback(Presentation* aPresentation,
+                                 const nsAString& aUrl,
+                                 const nsAString& aId,
+                                 const nsAString& aOrigin,
+                                 Promise* aPromise,
+                                 nsPIDOMWindow* aWindow)
   : mPresentation(aPresentation)
   , mId(aId)
   , mPromise(aPromise)
   , mWindow(aWindow)
 {
-  LOG("StartSessionCallback, aId: %s\n", NS_ConvertUTF16toUTF8(mId).get());
+  printf("SessionCallback, aId: %s\n", NS_ConvertUTF16toUTF8(mId).get());
 }
 
-StartSessionCallback::~StartSessionCallback()
+SessionCallback::~SessionCallback()
 {
   mPresentation = nullptr;
   mPromise = nullptr;
@@ -52,9 +66,9 @@ StartSessionCallback::~StartSessionCallback()
 }
 
 NS_IMETHODIMP
-StartSessionCallback::NotifySuccess()
+SessionCallback::NotifySuccess()
 {
-  LOG("StartSessionCallback::NotifySuccess");
+  printf("SessionCallback::NotifySuccess\n");
   MOZ_ASSERT(NS_IsMainThread());
   nsRefPtr<PresentationSession> session = PresentationSession::Create(mWindow,
                                                                       mId);
@@ -69,15 +83,16 @@ StartSessionCallback::NotifySuccess()
 
   nsAutoString id;
   session->GetId(id);
-  LOG("id: %s\n", NS_ConvertUTF16toUTF8(id).get());
+  printf("id: %s\n", NS_ConvertUTF16toUTF8(id).get());
   mPromise->MaybeResolve(session);
   mPromise = nullptr;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-StartSessionCallback::NotifyError(const nsAString& aError)
+SessionCallback::NotifyError(const nsAString& aError)
 {
+  printf("SessionCallback::NotifyError, %s\n", NS_ConvertUTF16toUTF8(aError).get());
   MOZ_ASSERT(NS_IsMainThread());
   mPromise->MaybeRejectBrokenly(aError);
   return NS_OK;
@@ -147,7 +162,7 @@ Presentation::StartSession(const nsAString& aUrl,
                                     const Optional<nsAString>& aId,
                                     ErrorResult& aRv)
 {
-  LOG("StartSession\n");
+  printf("StartSession\n");
   // Get origin.
   nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
   if (NS_WARN_IF(!global)) {
@@ -196,7 +211,7 @@ Presentation::StartSession(const nsAString& aUrl,
   }
 
   nsCOMPtr<nsIPresentationRequestCallback> callback =
-    new StartSessionCallback(this, aUrl, id, origin, promise, GetOwner());
+    new SessionCallback(this, aUrl, id, origin, promise, GetOwner());
   if (NS_FAILED(service->StartSessionInternal(aUrl, id, origin, callback))) {
     promise->MaybeReject(NS_ERROR_DOM_OPERATION_ERR);
   }
@@ -209,6 +224,7 @@ Presentation::JoinSession(const nsAString& aUrl,
                                    const nsAString& aId,
                                    ErrorResult& aRv)
 {
+  // Get origin.
   nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
   if (NS_WARN_IF(!global)) {
     aRv.Throw(NS_ERROR_UNEXPECTED);
@@ -221,8 +237,9 @@ Presentation::JoinSession(const nsAString& aUrl,
     return nullptr;
   }
 
-  nsAutoCString origin;
-  principal->GetOrigin(getter_Copies(origin));
+  nsAutoCString cstrOrigin;
+  principal->GetOrigin(getter_Copies(cstrOrigin));
+  NS_ConvertUTF8toUTF16 origin(cstrOrigin);
 
   nsRefPtr<Promise> promise = Promise::Create(global, aRv);
   if (NS_WARN_IF(aRv.Failed())) {
@@ -231,10 +248,15 @@ Presentation::JoinSession(const nsAString& aUrl,
 
   PresentationService* service = PresentationService::Get();
   if(NS_WARN_IF(!service)) {
-    promise->MaybeReject(NS_ERROR_DOM_ABORT_ERR);
+    promise->MaybeReject(NS_ERROR_NOT_AVAILABLE);
     return promise.forget();
   }
-  service->JoinSessionInternal(aUrl, aId, NS_ConvertUTF8toUTF16(origin));
+
+  nsCOMPtr<nsIPresentationRequestCallback> callback =
+    new SessionCallback(this, aUrl, aId, origin, promise, GetOwner());
+/*  if (NS_FAILED(service->JoinSessionInternal(aUrl, aId, origin, callback))) {
+    promise->MaybeReject(NS_ERROR_DOM_OPERATION_ERR);
+  }*/
 
   return promise.forget();
 }
@@ -249,14 +271,14 @@ Presentation::GetSession() const
 bool
 Presentation::Available() const
 {
-  LOG("Presentation::Available %d\n", mAvailable);
+  printf("Presentation::Available %d\n", mAvailable);
   return mAvailable;
 }
 
 NS_IMETHODIMP
 Presentation::NotifyAvailableChange(bool aAvailable)
 {
-  LOG("Presentation::NotifyAvailableChange, %d\n", aAvailable);
+  printf("Presentation::NotifyAvailableChange, %d\n", aAvailable);
   mAvailable = aAvailable;
   DispatchTrustedEvent(AVAILABLECHANGE_EVENT_NAME);
   return NS_OK;
@@ -265,10 +287,9 @@ Presentation::NotifyAvailableChange(bool aAvailable)
 NS_IMETHODIMP
 Presentation::NotifySessionReady(const nsAString& aId)
 {
-  LOG("Presentation::NotifySessionReady\n");
+  printf("Presentation::NotifySessionReady\n");
   mSession = PresentationSession::Create(GetOwner(), aId);
   NS_ENSURE_TRUE(mSession, NS_ERROR_DOM_ABORT_ERR);
-
   DispatchTrustedEvent(SESSIONREADY_EVENT_NAME);
   return NS_OK;
 }

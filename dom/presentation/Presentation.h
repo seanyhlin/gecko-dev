@@ -73,28 +73,6 @@ private:
   nsRefPtr<PresentationSession> mSession;
 };
 
-class StartSessionCallback : public nsIPresentationRequestCallback
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIPRESENTATIONREQUESTCALLBACK
-
-  StartSessionCallback(Presentation* aPresentation,
-                       const nsAString& aUrl,
-                       const nsAString& aId,
-                       const nsAString& aOrigin,
-                       Promise* aPromise,
-                       nsPIDOMWindow* aWindow);
-
-private:
-  virtual ~StartSessionCallback();
-
-  nsRefPtr<Presentation> mPresentation;
-  nsString mId;
-  nsRefPtr<Promise> mPromise;
-  nsCOMPtr<nsPIDOMWindow> mWindow;
-};
-
 } // namdspace presentation
 } // namespace dom
 } // namespace mozilla

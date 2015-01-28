@@ -15,6 +15,7 @@
 #include "nsIPresentationDevicePrompt.h" // nsIPresentationDeviceRequest
 #include "nsTObserverArray.h"
 #include "mozilla/dom/presentation/Session.h"
+#include "PresentationSessionTransport.h"
 
 class nsIInputStream;
 class nsITimer;
@@ -210,8 +211,6 @@ private:
   };
 
   nsClassHashtable<nsStringHashKey, SessionInfo> mSessionInfo;
-
-  nsCOMPtr<nsITimer> mDOMContentLoadedTimer;
 };
 
 } // namespace presentation

@@ -30,7 +30,7 @@ function testAvailability() {
 		function onResolved(newSession) {
       ok(newSession.id == SessionId, "SessionId should be testLastSessionId1234");
 			ok(true, "StartSession with last SessionId resolved.");
-//      testEnd();
+      testEnd();
 		},
     function onRejected(error) {
       ok(false, "StartSession with last SessionId rejected. " + error);
