@@ -153,6 +153,7 @@ PresentationService::PresentationService()
 /* virtual */ PresentationService::~PresentationService()
 {
   mListeners.Clear();
+  mSessionInfo.Clear();
 }
 
 bool
@@ -428,6 +429,15 @@ PresentationService::RegisterSessionListener(const nsAString& aSessionId,
 
   info->listener = aListener;
   NS_ENSURE_TRUE_VOID(info->listener);
+
+  if (info->isSessionComplete) {
+    // The transport might become ready before the listener has registered, so
+    // notify the listener of the state change.
+    nsresult rv = aListener->NotifyStateChange(aSessionId,
+                                               nsIPresentationSessionListener::STATE_CONNECTED,
+                                               NS_OK);
+    NS_ENSURE_SUCCESS_VOID(rv);
+  }
 }
 
 /* virtual */ void
@@ -450,6 +460,8 @@ PresentationService::OnSessionComplete(Session* aSession)
 
   SessionInfo* info = mSessionInfo.Get(aSession->Id());
   NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
+
+  info->isSessionComplete = true;
 
   // Session transport has been established, so notify the listener of the state
   // change and invoke callback if any.

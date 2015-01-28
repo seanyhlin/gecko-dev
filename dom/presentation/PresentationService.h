@@ -189,17 +189,20 @@ private:
   {
     SessionInfo(nsIPresentationRequestCallback* aCallback)
       : isRequester(true)
+      , isSessionComplete(false)
       , callback(aCallback)
     { }
 
     SessionInfo(Session* aSession,
                 nsIPresentationDevice* aDevice)
       : isRequester(false)
+      , isSessionComplete(false)
       , session(aSession)
       , device(aDevice)
     { }
 
     bool isRequester;
+    bool isSessionComplete;
     nsRefPtr<Session> session;
     nsCOMPtr<nsIPresentationDevice> device;
     nsCOMPtr<nsIPresentationSessionListener> listener;
