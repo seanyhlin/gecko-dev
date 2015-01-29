@@ -3647,16 +3647,12 @@ ContentParent::DeallocPFMRadioParent(PFMRadioParent* aActor)
 PPresentationParent*
 ContentParent::AllocPPresentationParent()
 {
-//    PresentationParent* actor = new PresentationParent();
-//    actor->AddRef();
-//    return actor
     return new PresentationParent();
 }
 
 bool
 ContentParent::DeallocPPresentationParent(PPresentationParent* aActor)
 {
-//    static_cast<PresentationParent*>(aActor)->Release();
     delete aActor;
     return true;
 }

@@ -29,6 +29,14 @@
 #include "mozilla/unused.h"
 #include "nsIPresentationSessionRequest.h"
 
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
+#else
+#define LOG(args...)  printf(args);
+#endif
+
+
 using namespace mozilla::services;
 
 namespace mozilla {
@@ -125,6 +133,7 @@ public:
     : Session(aId, aService)
     , mControlChannel(aControlChannel)
   {
+    mControlChannel->SetListener(this);
   }
 
 private:
@@ -139,10 +148,10 @@ NS_IMPL_ISUPPORTS_INHERITED(Requester,
                             nsIPresentationControlChannelListener,
                             nsIServerSocketListener)
 
-// nsIPresentationControlChannelListener
 NS_IMETHODIMP
 Requester::NotifyOpened()
 {
+  LOG("[Requester] %s", __FUNCTION__);
   // XXX do nothing and waiting for receiver ready?
   return NS_OK;
 }
@@ -150,6 +159,7 @@ Requester::NotifyOpened()
 NS_IMETHODIMP
 Requester::NotifyClosed(nsresult aReason)
 {
+  LOG("[Requester] %s", __FUNCTION__);
   // release control channel
   mControlChannel->SetListener(nullptr);
   mControlChannel = nullptr;
@@ -171,6 +181,7 @@ Requester::NotifyClosed(nsresult aReason)
 NS_IMETHODIMP
 Requester::NotifyReceiverReady()
 {
+  LOG("[Requester] %s", __FUNCTION__);
   // prepare server socket for bootstrapping session channel
   mServerSocket = do_CreateInstance(NS_SERVERSOCKET_CONTRACTID);
   mServerSocket->Init(-1, true, -1);
@@ -195,6 +206,7 @@ Requester::NotifyReceiverReady()
 NS_IMETHODIMP
 Requester::OnOffer(nsIPresentationChannelDescription* aDescription)
 {
+  LOG("[Requester] %s", __FUNCTION__);
   MOZ_ASSERT(false, "sender side should not receive offer");
   return NS_ERROR_FAILURE;
 }
@@ -202,6 +214,7 @@ Requester::OnOffer(nsIPresentationChannelDescription* aDescription)
 NS_IMETHODIMP
 Requester::OnAnswer(nsIPresentationChannelDescription* aDescription)
 {
+  LOG("[Requester] %s", __FUNCTION__);
   MOZ_ASSERT(!mTransport);
   // PresentationSessionTransport would take care of firing sessionComplete callback
   return NS_OK;
@@ -212,6 +225,7 @@ NS_IMETHODIMP
 Requester::OnSocketAccepted(nsIServerSocket* aServerSocket,
                             nsISocketTransport* aTransport)
 {
+  LOG("[Requester] %s", __FUNCTION__);
   mTransport = new PresentationSessionTransport(aTransport, this);
 
   return NS_OK;
@@ -221,6 +235,7 @@ NS_IMETHODIMP
 Requester::OnStopListening(nsIServerSocket* aServerSocket,
                            nsresult aStatus)
 {
+  LOG("[Requester] %s", __FUNCTION__);
   //XXX need extra handle?
   return NS_OK;
 }
@@ -230,9 +245,9 @@ Requester::OnStopListening(nsIServerSocket* aServerSocket,
 // Session object with receiver side behavior
 class Responder MOZ_FINAL : public Session
                           , public nsIPresentationControlChannelListener
-                          , public nsIObserver
                           , public nsIDOMEventListener
                           , public nsITimerCallback
+                          , public nsIObserver
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
@@ -273,6 +288,8 @@ NS_IMPL_ISUPPORTS_INHERITED(Responder,
 bool
 Responder::Init()
 {
+  LOG("[Responder] %s", __FUNCTION__);
+  mControlChannel->SetListener(this);
   nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
   if (NS_WARN_IF(!obs)) {
     return false;
@@ -288,9 +305,11 @@ Responder::Observe(nsISupports* aSubject,
                    const char* aTopic,
                    const char16_t* aData)
 {
+  LOG("[Responder] %s, %s", __FUNCTION__, aTopic);
   if (!strcmp(aTopic, "presentation-receiver-launched")) {
     nsCOMPtr<nsIFrameLoaderOwner> flOwner = do_QueryInterface(aSubject);
     nsCOMPtr<nsIFrameLoader> frameLoader;
+    
     if (!flOwner ||
         NS_FAILED(flOwner->GetFrameLoader(getter_AddRefs(frameLoader))) ||
         NS_FAILED(frameLoader->ActivateFrameEvent(DOMCONTENTLOADED_EVENT_NAME, false))) {
@@ -307,8 +326,14 @@ Responder::Observe(nsISupports* aSubject,
     nsresult rv;
     mTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
     if (NS_SUCCEEDED(rv)) {
-      mTimer->InitWithCallback(this, 1000, nsITimer::TYPE_ONE_SHOT);
+      mTimer->InitWithCallback(this, 10000, nsITimer::TYPE_ONE_SHOT);
     }
+
+    nsCOMPtr<nsIObserverService> obs = services::GetObserverService();
+    if (obs) {
+      obs->RemoveObserver(this, "presentation-receiver-launched");
+    }
+
     return NS_OK;
   }
 
@@ -320,10 +345,11 @@ Responder::Observe(nsISupports* aSubject,
 NS_IMETHODIMP
 Responder::Notify(nsITimer* aTimer)
 {
+  LOG("[Responder] %s", __FUNCTION__);
   mTimer = nullptr;
   if (!isLoaded) {
     // timeout
-    mControlChannel->Close(NS_OK);
+    mControlChannel->Close(NS_ERROR_FAILURE);
   }
   return NS_OK;
 }
@@ -333,6 +359,7 @@ Responder::Notify(nsITimer* aTimer)
 NS_IMETHODIMP
 Responder::NotifyOpened()
 {
+  LOG("[Responder] %s", __FUNCTION__);
   //XXX do nothing and wait for event DOMContentLoaded
   return NS_OK;
 }
@@ -340,6 +367,7 @@ Responder::NotifyOpened()
 NS_IMETHODIMP
 Responder::NotifyClosed(nsresult aReason)
 {
+  LOG("[Responder] %s", __FUNCTION__);
   // release control channel
   mControlChannel->SetListener(nullptr);
   mControlChannel = nullptr;
@@ -355,6 +383,7 @@ Responder::NotifyClosed(nsresult aReason)
 NS_IMETHODIMP
 Responder::NotifyReceiverReady()
 {
+  LOG("[Responder] %s", __FUNCTION__);
   MOZ_ASSERT(false, "receiver side don't need session ready");
   return NS_ERROR_FAILURE;
 }
@@ -362,6 +391,7 @@ Responder::NotifyReceiverReady()
 NS_IMETHODIMP
 Responder::OnOffer(nsIPresentationChannelDescription* aDescription)
 {
+  LOG("[Responder] %s", __FUNCTION__);
   uint16_t serverPort;
   aDescription->GetTcpPort(&serverPort);
 
@@ -409,7 +439,7 @@ Responder::OnOffer(nsIPresentationChannelDescription* aDescription)
   if (!mTransport) {
     // abort the entire procedure if cannot establish session transport
     // XXX NS_OK / NS_ERROR_FAILURE?
-    mControlChannel->Close(NS_OK);
+    mControlChannel->Close(NS_ERROR_FAILURE);
   }
 
   return NS_OK;
@@ -418,6 +448,7 @@ Responder::OnOffer(nsIPresentationChannelDescription* aDescription)
 NS_IMETHODIMP
 Responder::OnAnswer(nsIPresentationChannelDescription* aDescription)
 {
+  LOG("[Responder] %s", __FUNCTION__);
   MOZ_ASSERT(false, "receiver side should not receive answer");
   return NS_ERROR_FAILURE;
 }
@@ -426,15 +457,21 @@ Responder::OnAnswer(nsIPresentationChannelDescription* aDescription)
 NS_IMETHODIMP
 Responder::HandleEvent(nsIDOMEvent* aDOMEvent)
 {
-  isLoaded = true;
+  LOG("[Responder] %s", __FUNCTION__);
+  if (mTimer) {
+    mTimer->Cancel();
+    mTimer = nullptr;
+  }
 
-  mTimer->Cancel();
-  mTimer = nullptr;
+  if (!isLoaded) {
+    mControlChannel->ReceiverReady();
+    isLoaded = true;
+    mService->NotifySessionReady(Id());
+  }
 
-  mControlChannel->ReceiverReady();
-  mService->NotifySessionReady(Id());
-
-  mTarget->RemoveEventListener(DOMCONTENTLOADED_EVENT_NAME, this, false);
+  if (mTarget) {
+    mTarget->RemoveEventListener(DOMCONTENTLOADED_EVENT_NAME, this, false);
+  }
   return NS_OK;
 }
 
@@ -448,6 +485,7 @@ Session::CreateRequester(const nsAString& aId,
                          PresentationService* aService,
                          nsIPresentationControlChannel* aControlChannel)
 {
+  LOG("[Session] %s", __FUNCTION__);
   nsRefPtr<Requester> requester = new Requester(aId, aService, aControlChannel);
 
   return requester.forget();
@@ -458,6 +496,7 @@ Session::CreateResponder(const nsAString& aId,
                          PresentationService* aService,
                          nsIPresentationControlChannel* aControlChannel)
 {
+  LOG("[Session] %s", __FUNCTION__);
   nsRefPtr<Responder> responder = new Responder(aId, aService, aControlChannel);
 
   return responder.forget();

@@ -27,6 +27,12 @@
 #include "mozilla/unused.h"
 
 #include "FakePresentationDevice.h"
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
+#else
+#define LOG(args...)  printf(args);
+#endif
 
 using namespace mozilla;
 using namespace mozilla::dom;
@@ -69,7 +75,7 @@ PresentationService::PresentationDeviceRequest::GetRequestURL(nsAString& aReques
 NS_IMETHODIMP
 PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aDevice)
 {
-  printf("PresentationDeviceRequest::Select\n");
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   NS_ENSURE_ARG(aDevice);
 
@@ -93,16 +99,13 @@ PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aD
   // Create requester and then update SessionInfo.
   info->session = Session::CreateRequester(mId, sPresentationService, ctrlChannel);
 
-  // HACK
-//  info->session->OnClose(NS_OK);
-  info->session->OnComplete();
-
   return NS_OK;
 }
 
 NS_IMETHODIMP
 PresentationService::PresentationDeviceRequest::Cancel()
 {
+  LOG("[Service] %s", __FUNCTION__);
   sPresentationService->ReplyRequestWithError(mId, NS_LITERAL_STRING("UserCanceled"));
   sPresentationService->mSessionInfo.Remove(mId);
   return NS_OK;
@@ -170,7 +173,6 @@ PresentationService::Init()
   obs->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
   obs->AddObserver(this, PRESENTATION_DEVICE_CHANGE_TOPIC, false);
   obs->AddObserver(this, PRESENTATION_SESSION_REQUEST_TOPIC, false);
-  obs->AddObserver(this, "presentation-receiver-launched", false);
 
   nsCOMPtr<nsIPresentationDeviceManager> deviceManager =
     do_GetService(PRESENTATION_DEVICE_MANAGER_CONTRACTID);
@@ -238,6 +240,8 @@ PresentationService::HandleDeviceChange()
 nsresult
 PresentationService::HandleSessionRequest(nsISupports* aSubject)
 {
+  LOG("[Service] %s", __FUNCTION__);
+
   // Receives a session request on receiver side.
   nsCOMPtr<nsIPresentationSessionRequest> request(do_QueryInterface(aSubject));
   if (NS_WARN_IF(!request)) {
@@ -248,24 +252,37 @@ PresentationService::HandleSessionRequest(nsISupports* aSubject)
   nsCOMPtr<nsIPresentationControlChannel> ctrlChannel;
   request->GetPresentationId(id);
   request->GetControlChannel(getter_AddRefs(ctrlChannel));
+  MOZ_ASSERT(ctrlChannel);
   nsRefPtr<Session> session = Session::CreateResponder(id, this, ctrlChannel);
 
   // Create a responder and SessionInfo object
   nsCOMPtr<nsIPresentationDevice> device;
   request->GetDevice(getter_AddRefs(device));
   SessionInfo* info = new SessionInfo(session, device);
-  mSessionInfo.Put(id, info);
+
+  const fallible_t fallible = fallible_t();
+  MOZ_ASSERT(mSessionInfo.Put(id, info, fallible));
 
   nsAutoString url;
   request->GetUrl(url);
-  if (!FindAppOnDevice(url)) {
-    // nsIPresentationControlChannel::NotifyClosed() is called on server side.
-    ctrlChannel->Close(NS_OK);
-  } else {
-    nsCOMPtr<nsIObserverService> obs = GetObserverService();
-    if (obs) {
-      obs->NotifyObservers(aSubject, "presentation-launch-receiver", nullptr);
+  if (url.Find("app://") == 0) {
+    int32_t offset = url.RFindChar('/');
+    if (offset == kNotFound) {
+      ctrlChannel->Close(NS_ERROR_UNEXPECTED);
+      return NS_OK;
     }
+    url = Substring(url, 0, offset);
+    url.AppendLiteral("/manifest.webapp");
+
+    if (!FindAppOnDevice(url)) {
+      ctrlChannel->Close(NS_ERROR_UNEXPECTED);
+      return NS_OK;
+    }
+  }
+
+  nsCOMPtr<nsIObserverService> obs = GetObserverService();
+  if (obs) {
+    obs->NotifyObservers(aSubject, "presentation-launch-receiver", nullptr);
   }
 
   return NS_OK;
@@ -334,6 +351,7 @@ PresentationService::StartSessionInternal(const nsAString& aUrl,
 {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_ASSERT(aCallback);
+  LOG("[Service] %s", __FUNCTION__);
 
   // HACK
 /*  if (!mAvailable) {
@@ -350,19 +368,12 @@ PresentationService::StartSessionInternal(const nsAString& aUrl,
   nsCOMPtr<nsIPresentationDeviceRequest> request =
     new PresentationDeviceRequest(aUrl, aId, aOrigin);
 
-  // HACK
-/*  nsCOMPtr<nsIPresentationDevicePrompt> prompt =
+  nsCOMPtr<nsIPresentationDevicePrompt> prompt =
     do_GetService(PRESENTATION_DEVICE_PROMPT_CONTRACTID);
   if (NS_WARN_IF(!prompt)) {
     return NS_ERROR_FAILURE;
   }
-  prompt->PromptDeviceSelection(request);*/
-
-  nsCOMPtr<nsIPresentationDevice> mock = new MockPresentationDevice();
-//  request->Cancel();
-  request->Select(mock);
-  return NS_OK;
-
+  prompt->PromptDeviceSelection(request);
 
   return NS_OK;
 }
@@ -475,7 +486,7 @@ PresentationService::UnregisterSessionListener(const nsAString& aSessionId,
 nsresult
 PresentationService::OnSessionComplete(Session* aSession)
 {
-  printf("OnSessionComplete\n");
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   NS_ENSURE_ARG_POINTER(aSession);
 
@@ -507,7 +518,7 @@ PresentationService::OnSessionComplete(Session* aSession)
 nsresult
 PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
 {
-  printf("OnSessionClose\n");
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   NS_ENSURE_ARG_POINTER(aSession);
 
@@ -528,20 +539,17 @@ PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
     info->listener = nullptr;
   }
 
-  // Keep the session info.
-  if (NS_FAILED(aReason)) {
-    info->session = nullptr;
-    info->callback = nullptr;
-    return NS_OK;
-  }
-
   if (!info->isRequester) {
     info->session = nullptr;
     info->device = nullptr;
-  } else {
+  } else if (info->callback) {
     ReplyRequestWithError(aSession->Id(), NS_LITERAL_STRING("FailedToEstablishSession"));
+    info->callback = nullptr;
   }
-  mSessionInfo.Remove(aSession->Id());
+
+  if (NS_SUCCEEDED(aReason)) {
+    mSessionInfo.Remove(aSession->Id());
+  }
 
   return NS_OK;
 }

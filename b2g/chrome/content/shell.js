@@ -742,6 +742,7 @@ var CustomEventManager = {
         break;
       case 'do-command':
         DoCommandHelper.handleEvent(detail.cmd);
+        break;
       case 'presentation-receiver-launched':
         Services.obs.notifyObservers(detail.frame, 'presentation-receiver-launched', detail.id);
         break;

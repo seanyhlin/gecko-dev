@@ -18,7 +18,7 @@ XPCOMUtils.defineLazyGetter(this, "converter", () => {
 });
 
 function log(msg) {
-  dump("-*- DemoProvider.js: "  msg  "\n");
+  dump("-*- DemoProvider.js: " + msg + "\n");
 }
 
 function DeviceInfo(name, ip, port) {
@@ -42,7 +42,7 @@ SignalingChannel.prototype = {
   QueryInterface : XPCOMUtils.generateQI([Ci.nsIUDPSocketListener]),
 
   onPacketReceived : function(aSocket, aMessage){
-    log('SignalingChannel - receive remote message: '  aMessage.data);
+    log('SignalingChannel - receive remote message: ' + aMessage.data);
     let device = new DeviceInfo('remote', aMessage.fromAddr.address, aMessage.fromAddr.port);
     let msg = JSON.parse(aMessage.data);
     if (this.onmessage) {
@@ -55,14 +55,14 @@ SignalingChannel.prototype = {
   },
 
   send: function(device, msg) {
-    log("SignalingChannel - Send to "  JSON.stringify(device)  ": "  JSON.stringify(msg, null, 2));
+    log("SignalingChannel - Send to " + JSON.stringify(device) + ": " + JSON.stringify(msg, null, 2));
 
     let message = JSON.stringify(msg);
     let rawMessage = converter.convertToByteArray(message);
     try {
       this._socket.send(device.ip, device.port, rawMessage, rawMessage.length);
     } catch(e) {
-      log("SignalingChannel - Failed to send message: "  e);
+      log("SignalingChannel - Failed to send message: " + e);
     }
   },
 
@@ -112,7 +112,7 @@ PresentationServer.prototype = {
   },
 
   requestSession: function(device, url, presentationId) {
-    log("PresentationServer - requestSession to "  JSON.stringify(device)  ": "  url  ", "  presentationId);
+    log("PresentationServer - requestSession to " + JSON.stringify(device) + ": " + url + ", " + presentationId);
     let msg = {
       type: "requestSession",
       url: url,
@@ -126,7 +126,7 @@ PresentationServer.prototype = {
   },
 
   responseSession: function(device, presentationId) {
-    log("PresentationServer - responseSession to "  JSON.stringify(device)  ": "  presentationId);
+    log("PresentationServer - responseSession to " + JSON.stringify(device) + ": " + presentationId);
     let transport = new DemoControlChannel(device, presentationId, 'receiver');
     this._receivers[presentationId] = transport;
     transport.established();
@@ -134,7 +134,7 @@ PresentationServer.prototype = {
   },
 
   sendOffer: function(device, presentationId, offer) {
-    log("PresentationServer - sendOffer to "  JSON.stringify(device)  ": "  presentationId  ", "  JSON.stringify(offer));
+    log("PresentationServer - sendOffer to " + JSON.stringify(device) + ": " + presentationId + ", " + JSON.stringify(offer));
     let msg = {
       type: "requestSession:Offer",
       presentationId: presentationId,
@@ -144,7 +144,7 @@ PresentationServer.prototype = {
   },
 
   sendAnswer: function(device, presentationId, answer) {
-    log("PresentationServer - response to "  JSON.stringify(device)  ": "  presentationId  ", "  JSON.stringify(answer));
+    log("PresentationServer - response to " + JSON.stringify(device) + ": " + presentationId + ", " + JSON.stringify(answer));
     let msg = {
       type: "requestSession:Answer",
       presentationId: presentationId,
@@ -154,7 +154,7 @@ PresentationServer.prototype = {
   },
 
   receiverReady: function(device, presentationId) {
-    log("PresentationServer - sendOffer to "  JSON.stringify(device)  ": "  presentationId);
+    log("PresentationServer - sendOffer to " + JSON.stringify(device) + ": " + presentationId);
     let msg = {
       type: "requestSession:ReceiverReady",
       presentationId: presentationId,
@@ -163,7 +163,7 @@ PresentationServer.prototype = {
   },
 
   _handleMessage: function(device, msg) {
-    log("PresentationServer - handleMessage from "  JSON.stringify(device)  ": "  JSON.stringify(msg));
+    log("PresentationServer - handleMessage from " + JSON.stringify(device) + ": " + JSON.stringify(msg));
     switch (msg.type) {
       case "requestSession": {
         let dev = null;
@@ -190,7 +190,9 @@ PresentationServer.prototype = {
       }
       case "requestSession:Offer": {
         let transport = this._receivers[msg.presentationId];
+				log(JSON.stringify(Object.keys(this._receivers)));
         if (!transport) {
+					log("no transport for " + msg.presentationId);
           return;
         }
         transport.onOffer(msg.offer);
@@ -230,7 +232,7 @@ PresentationServer.prototype = {
   },
 
   sessionClose: function(device, presentationId, reason, direction) {
-    log('PresentationServer - sessionClose to '  JSON.stringify(device)  ': '  presentationId);
+    log('PresentationServer - sessionClose to ' + JSON.stringify(device) + ': ' + presentationId);
     let msg = {
       type: 'sessionClose',
       presentationId: presentationId,
@@ -253,14 +255,14 @@ PresentationServer.prototype = {
 var presentationServer = new PresentationServer();
 
 function ChannelDescription(init) {
-  log("create ChannelDescription: "  JSON.stringify(init));
+  log("create ChannelDescription: " + JSON.stringify(init));
 
   this._type = init.type;
   switch (this._type) {
     case Ci.nsIPresentationChannelDescription.TYPE_TCP:
       this._tcpAddresses = Cc["@mozilla.org/array;1"].createInstance(Ci.nsIMutableArray);
       for (let address of init.tcpAddresses) {
-        let wrapper = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsString);
+        let wrapper = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsCString);
         wrapper.data = address;
         this._tcpAddresses.appendElement(wrapper, false);
       }
@@ -297,7 +299,7 @@ ChannelDescription.prototype = {
 
 // adapter to Presentation Device Management interfaces.
 function DemoControlChannel(device, presentationId, direction) {
-  log("create DemoControlChannel: "  presentationId);
+  log("create DemoControlChannel: " + presentationId);
   this._device = device;
   this._presentationId = presentationId;
   this._direction = direction;
@@ -317,7 +319,7 @@ DemoControlChannel.prototype = {
   },
   sendOffer: function(offer) {
     let offerInit = this._convertToJson(offer);
-    log("DemoControlChannel - sendOffer: "  JSON.stringify(offerInit));
+    log("DemoControlChannel - sendOffer: " + JSON.stringify(offerInit));
     if (!this._connected) {
       return;
     }
@@ -325,7 +327,7 @@ DemoControlChannel.prototype = {
   },
   sendAnswer: function(answer) {
     let answerInit = this._convertToJson(answer);
-    log("DemoControlChannel - sendAnswer: "  JSON.stringify(answerInit));
+    log("DemoControlChannel - sendAnswer: " + JSON.stringify(answerInit));
     if (!this._connected) {
       return;
     }
@@ -342,7 +344,7 @@ DemoControlChannel.prototype = {
     return this._listener;
   },
   set listener(listener) {
-    log("DemoControlChannel - set listener: "  listener);
+    log("DemoControlChannel - set listener: " + listener);
     if (!listener) {
       this._listener = null;
       return;
@@ -357,14 +359,14 @@ DemoControlChannel.prototype = {
 
     if (this._pendingOffer) {
       let offer = this._pendingOffer;
-      log("DemoControlChannel - notify pending offer: "  JSON.stringify(offer));
+      log("DemoControlChannel - notify pending offer: " + JSON.stringify(offer));
       this._listener.onOffer(new ChannelDescription(offer));
       this._pendingOffer = null;
     }
 
     if (this._pendingAnswer) {
       let answer = this._pendingAnswer;
-      log("DemoControlChannel - notify pending answer: "  JSON.stringify(answer));
+      log("DemoControlChannel - notify pending answer: " + JSON.stringify(answer));
       this._listener.onAnswer(new ChannelDescription(answer));
       this._pendingAnswer = null;
     }
@@ -391,6 +393,7 @@ DemoControlChannel.prototype = {
     this._listener.notifyOpened();
   },
   onOffer: function(offer) {
+		log(this._connected + ", " + this._listener);
     if (!this._connected) {
       return;
     }
@@ -398,7 +401,7 @@ DemoControlChannel.prototype = {
       this._pendingOffer = offer;
       return;
     }
-    log("DemoControlChannel - notify offer: "  JSON.stringify(offer));
+    log("DemoControlChannel - notify offer: " + JSON.stringify(offer));
     this._listener.onOffer(new ChannelDescription(offer));
   },
   onAnswer: function(answer) {
@@ -409,7 +412,7 @@ DemoControlChannel.prototype = {
       this._pendingAnswer = answer;
       return;
     }
-    log("DemoControlChannel - notify answer: "  JSON.stringify(answer));
+    log("DemoControlChannel - notify answer: " + JSON.stringify(answer));
     this._listener.onAnswer(new ChannelDescription(answer));
   },
   onClose: function(reason) {
@@ -449,8 +452,8 @@ DemoControlChannel.prototype = {
       case Ci.nsIPresentationChannelDescription.TYPE_TCP:
         let addresses = description.tcpAddress.QueryInterface(Ci.nsIArray);
         json.tcpAddresses = [];
-        for (let idx = 0; idx < addresses.length; idx) {
-          let address = addresses.queryElementAt(idx, Ci.nsISupportsString);
+        for (let idx = 0; idx < addresses.length; idx++) {
+          let address = addresses.queryElementAt(idx, Ci.nsISupportsCString);
           json.tcpAddresses.push(address.data);
         }
         json.tcpPort = description.tcpPort;
@@ -467,7 +470,7 @@ DemoControlChannel.prototype = {
 };
 
 function DemoDevice(info) {
-  log("create DemoDevice: "  JSON.stringify(info));
+  log("create DemoDevice: " + JSON.stringify(info));
   this.id = info.name;
   this.name = info.name;
   this.host = info.host;
@@ -478,7 +481,7 @@ DemoDevice.prototype = {
   type: "demo",
 
   establishControlChannel: function(url, presentationId) {
-    log("DemoDevice - establishControlChannel: "  url  ", "  presentationId);
+    log("DemoDevice - establishControlChannel: " + url + ", " + presentationId);
     return presentationServer.requestSession(this._getDeviceInfo(), url, presentationId);
   },
   get listener() {
@@ -489,7 +492,7 @@ DemoDevice.prototype = {
     this._listener = listener;
   },
   onRequestSession: function(url, presentationId) {
-    log("DemoDevice - onRequestSession: "  url  ", "  presentationId);
+    log("DemoDevice - onRequestSession: " + url + ", " + presentationId);
     let transport = presentationServer.responseSession(this._getDeviceInfo(), presentationId);
     this._listener.onSessionRequest(this, url, presentationId, transport);
   },
@@ -535,7 +538,7 @@ DemoDeviceProvider.prototype = {
   },
 
   set listener(listener) {
-    log("DemoDeviceProvider - set listener: "  listener);
+    log("DemoDeviceProvider - set listener: " + listener);
     if (listener) {
       this._listener = listener;
       this._addDevices(this.loadDevices());
@@ -548,7 +551,7 @@ DemoDeviceProvider.prototype = {
   },
 
   observe: function(subject, topic, data) {
-    log("DemoDeviceProvider - observe: "  topic);
+    log("DemoDeviceProvider - observe: " + topic);
     if (!subject) {
       log("No active network");
       return;
@@ -564,7 +567,7 @@ DemoDeviceProvider.prototype = {
 
   _addDevices: function(deviceInfos) {
     for (let deviceInfo of deviceInfos) {
-      log("DemoDeviceProvider - add device: "  JSON.stringify(deviceInfo));
+      log("DemoDeviceProvider - add device: " + JSON.stringify(deviceInfo));
       let newDevice = new DemoDevice(deviceInfo);
       devices[deviceInfo.name] = newDevice;
       this._listener.addDevice(newDevice);
@@ -573,7 +576,7 @@ DemoDeviceProvider.prototype = {
 
   _removeAllDevices: function() {
     for (let device in Object.keys(devices)) {
-    log("DemoDeviceProvider - remove device: "  device);
+    log("DemoDeviceProvider - remove device: " + device);
       this._listener.removeDevice(devices[device]);
     }
     devices = {};
@@ -582,6 +585,6 @@ DemoDeviceProvider.prototype = {
   classID: Components.ID("{ab6e00ed-42c3-47ea-98d5-2fc19f8862ec}"),
   QueryInterface: XPCOMUtils.generateQI([Ci.nsIPresentationDeviceProvider,
                                          Ci.nsIObserver]),
-i};
+};
 
 this.NSGetFactory = XPCOMUtils.generateNSGetFactory([DemoDeviceProvider]);

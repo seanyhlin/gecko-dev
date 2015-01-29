@@ -14,6 +14,13 @@
 #include "nsXULAppAPI.h"
 #include "PresentationSessionRequest.h"
 
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
+#else
+#define LOG(args...)  printf(args);
+#endif
+
 namespace mozilla {
 namespace dom {
 
@@ -37,11 +44,13 @@ void
 PresentationDeviceManager::LoadDeviceProviders()
 {
   MOZ_ASSERT(mProviders.IsEmpty());
+  LOG("[DeviceManager] %s", __FUNCTION__);
 
   nsCategoryCache<nsIPresentationDeviceProvider> providerCache(PRESENTATION_DEVICE_PROVIDER_CATEGORY);
   providerCache.GetEntries(mProviders);
 
   for (uint32_t i = 0; i < mProviders.Length(); ++i) {
+    LOG("[DeviceManager] set listener");
     mProviders[i]->SetListener(this);
   }
 }
