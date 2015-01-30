@@ -187,7 +187,7 @@ Requester::NotifyReceiverReady()
   LOG("[Requester] %s", __FUNCTION__);
   // prepare server socket for bootstrapping session channel
   mServerSocket = do_CreateInstance(NS_SERVERSOCKET_CONTRACTID);
-  mServerSocket->Init(-1, true, -1);
+  mServerSocket->Init(-1, false, -1);
   mServerSocket->AsyncListen(this);
 
   // prepare offer and send to remote endpoint
@@ -256,7 +256,7 @@ Requester::OnSocketAccepted(nsIServerSocket* aServerSocket,
                             nsISocketTransport* aTransport)
 {
   LOG("[Requester] %s", __FUNCTION__);
-  mTransport = new PresentationSessionTransport(aTransport, this);
+  mTransport = new PresentationSessionTransport(aTransport, this, /* server */ true);
 
   return NS_OK;
 }

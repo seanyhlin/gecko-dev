@@ -36,8 +36,14 @@ public:
   NS_DECL_NSIREQUESTOBSERVER
   NS_DECL_NSISTREAMLISTENER
 
+  // for receiver
   explicit PresentationSessionTransport(nsISocketTransport* aTransport,
                                         nsIPresentationSessionTransportCallback* aCallback);
+
+  // for sender
+  explicit PresentationSessionTransport(nsISocketTransport* aTransport,
+                                        nsIPresentationSessionTransportCallback* aCallback,
+                                        bool aDummy);
 
 private:
   virtual ~PresentationSessionTransport();

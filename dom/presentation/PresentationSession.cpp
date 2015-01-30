@@ -14,6 +14,13 @@ using namespace mozilla;
 using namespace mozilla::dom;
 using namespace mozilla::dom::presentation;
 
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
+#else
+#define LOG(args...)  printf(args);
+#endif
+
 NS_IMPL_CYCLE_COLLECTION_CLASS(PresentationSession)
 
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(PresentationSession, DOMEventTargetHelper)
@@ -47,6 +54,7 @@ PresentationSession::PresentationSession(nsPIDOMWindow* aWindow,
 PresentationSession::Create(nsPIDOMWindow* aWindow,
                             const nsAString& aId)
 {
+  LOG("[PresentationSession] %s", __FUNCTION__);
   nsRefPtr<PresentationSession> session = new PresentationSession(aWindow, aId);
   return NS_WARN_IF(!session->Init()) ? nullptr : session.forget();
 }
@@ -111,6 +119,7 @@ void
 PresentationSession::Send(const nsAString& aData,
                           ErrorResult& aRv)
 {
+  LOG("[PresentationSession] %s", __FUNCTION__);
   // Sending is not allowed if the socket is not connected.
   if (NS_WARN_IF(mState != PresentationSessionState::Connected)) {
     aRv.Throw(NS_ERROR_DOM_INVALID_STATE_ERR);
@@ -146,6 +155,7 @@ PresentationSession::Send(const nsAString& aData,
 void
 PresentationSession::Disconnect(ErrorResult& aRv)
 {
+  LOG("[PresentationSession] %s", __FUNCTION__);
   // Closing is not allowed if the socket is not connected.
   if (NS_WARN_IF(mState != PresentationSessionState::Connected)) {
     aRv.Throw(NS_ERROR_DOM_INVALID_STATE_ERR);
@@ -167,6 +177,7 @@ PresentationSession::Disconnect(ErrorResult& aRv)
 nsresult
 PresentationSession::SetState(PresentationSessionState aState)
 {
+  LOG("[PresentationSession] %s", __FUNCTION__);
   if (mState == aState) {
     return NS_OK;
   }
@@ -181,6 +192,7 @@ PresentationSession::NotifyStateChange(const nsAString& aSessionId,
                                        uint16_t aState,
                                        nsresult aReason)
 {
+  LOG("[PresentationSession] %s", __FUNCTION__);
   if (mId != aSessionId) {
     return NS_OK;
   }
@@ -207,6 +219,7 @@ NS_IMETHODIMP
 PresentationSession::NotifyMessage(const nsAString& aSessionId,
                                    const nsACString& aData)
 {
+  LOG("[PresentationSession] %s", __FUNCTION__);
   if (mId != aSessionId) {
     return NS_OK;
   }
@@ -236,6 +249,7 @@ PresentationSession::NotifyMessage(const nsAString& aSessionId,
 nsresult
 PresentationSession::DispatchMessageEvent(JS::Handle<JS::Value> aData)
 {
+  LOG("[PresentationSession] %s", __FUNCTION__);
   nsCOMPtr<nsIDOMEvent> event;
   nsresult rv = NS_NewDOMMessageEvent(getter_AddRefs(event), this, nullptr, nullptr);
   NS_ENSURE_SUCCESS(rv, rv);

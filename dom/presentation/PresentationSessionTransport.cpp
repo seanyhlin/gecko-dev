@@ -50,6 +50,12 @@ PresentationSessionTransport::PresentationSessionTransport(nsISocketTransport* a
   mInputStream->AsyncWait(this, 0, 0, NS_GetCurrentThread());
 }
 
+PresentationSessionTransport::PresentationSessionTransport(nsISocketTransport* aTransport, nsIPresentationSessionTransportCallback* aCallback, bool aDummy)
+  : PresentationSessionTransport(aTransport, aCallback)
+{
+  OnTransportStatus(mTransport, NS_NET_STATUS_CONNECTED_TO, 0, 0);
+}
+
 PresentationSessionTransport::~PresentationSessionTransport()
 {
 }

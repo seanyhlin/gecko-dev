@@ -215,6 +215,7 @@ PresentationService::NotifyAvailableListeners(bool aAvailable)
 void
 PresentationService::NotifySessionReady(const nsAString& aId)
 {
+  LOG("[Service] %s", __FUNCTION__);
   nsTObserverArray<nsCOMPtr<nsIPresentationListener> >::ForwardIterator iter(mListeners);
   while (iter.HasMore()) {
     nsIPresentationListener* listener = iter.GetNext();
@@ -502,7 +503,7 @@ PresentationService::OnSessionComplete(Session* aSession)
   // Session transport has been established, so notify the listener of the state
   // change and invoke callback if any.
   nsCOMPtr<nsIPresentationSessionListener> listener = info->listener;
-  NS_WARN_IF(!listener);
+//  NS_WARN_IF(!listener);
   if (listener) {
     nsresult rv = listener->NotifyStateChange(aSession->Id(),
                                               nsIPresentationSessionListener::STATE_CONNECTED,

@@ -18,6 +18,13 @@ using namespace mozilla;
 using namespace mozilla::dom;
 using namespace mozilla::dom::presentation;
 
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
+#else
+#define LOG(args...)  printf(args);
+#endif
+
 // SessionCallback
 
 class SessionCallback : public nsIPresentationRequestCallback
@@ -55,7 +62,7 @@ SessionCallback::SessionCallback(Presentation* aPresentation,
   , mPromise(aPromise)
   , mWindow(aWindow)
 {
-  printf("SessionCallback, aId: %s\n", NS_ConvertUTF16toUTF8(mId).get());
+  LOG("SessionCallback, aId: %s\n", NS_ConvertUTF16toUTF8(mId).get());
 }
 
 SessionCallback::~SessionCallback()
@@ -68,7 +75,7 @@ SessionCallback::~SessionCallback()
 NS_IMETHODIMP
 SessionCallback::NotifySuccess()
 {
-  printf("SessionCallback::NotifySuccess\n");
+  LOG("SessionCallback::NotifySuccess\n");
   MOZ_ASSERT(NS_IsMainThread());
   nsRefPtr<PresentationSession> session = PresentationSession::Create(mWindow,
                                                                       mId);
@@ -83,7 +90,7 @@ SessionCallback::NotifySuccess()
 
   nsAutoString id;
   session->GetId(id);
-  printf("id: %s\n", NS_ConvertUTF16toUTF8(id).get());
+  LOG("id: %s\n", NS_ConvertUTF16toUTF8(id).get());
   mPromise->MaybeResolve(session);
   mPromise = nullptr;
   return NS_OK;
@@ -92,7 +99,7 @@ SessionCallback::NotifySuccess()
 NS_IMETHODIMP
 SessionCallback::NotifyError(const nsAString& aError)
 {
-  printf("SessionCallback::NotifyError, %s\n", NS_ConvertUTF16toUTF8(aError).get());
+  LOG("SessionCallback::NotifyError, %s\n", NS_ConvertUTF16toUTF8(aError).get());
   MOZ_ASSERT(NS_IsMainThread());
   mPromise->MaybeRejectBrokenly(aError);
   return NS_OK;
@@ -162,7 +169,7 @@ Presentation::StartSession(const nsAString& aUrl,
                                     const Optional<nsAString>& aId,
                                     ErrorResult& aRv)
 {
-  printf("StartSession\n");
+  LOG("StartSession\n");
   // Get origin.
   nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
   if (NS_WARN_IF(!global)) {
@@ -271,14 +278,14 @@ Presentation::GetSession() const
 bool
 Presentation::Available() const
 {
-  printf("Presentation::Available %d\n", mAvailable);
+  LOG("Presentation::Available %d", mAvailable);
   return mAvailable;
 }
 
 NS_IMETHODIMP
 Presentation::NotifyAvailableChange(bool aAvailable)
 {
-  printf("Presentation::NotifyAvailableChange, %d\n", aAvailable);
+  LOG("Presentation::NotifyAvailableChange, %d", aAvailable);
   mAvailable = aAvailable;
   DispatchTrustedEvent(AVAILABLECHANGE_EVENT_NAME);
   return NS_OK;
@@ -287,7 +294,7 @@ Presentation::NotifyAvailableChange(bool aAvailable)
 NS_IMETHODIMP
 Presentation::NotifySessionReady(const nsAString& aId)
 {
-  printf("Presentation::NotifySessionReady\n");
+  LOG("Presentation::NotifySessionReady");
   mSession = PresentationSession::Create(GetOwner(), aId);
   NS_ENSURE_TRUE(mSession, NS_ERROR_DOM_ABORT_ERR);
   DispatchTrustedEvent(SESSIONREADY_EVENT_NAME);
