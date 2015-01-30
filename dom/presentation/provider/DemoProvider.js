@@ -262,7 +262,7 @@ function ChannelDescription(init) {
     case Ci.nsIPresentationChannelDescription.TYPE_TCP:
       this._tcpAddresses = Cc["@mozilla.org/array;1"].createInstance(Ci.nsIMutableArray);
       for (let address of init.tcpAddresses) {
-        let wrapper = Cc["@mozilla.org/supports-string;1"].createInstance(Ci.nsISupportsCString);
+        let wrapper = Cc["@mozilla.org/supports-cstring;1"].createInstance(Ci.nsISupportsCString);
         wrapper.data = address;
         this._tcpAddresses.appendElement(wrapper, false);
       }

@@ -299,6 +299,8 @@ PresentationService::Observe(nsISupports* aSubject,
     return HandleDeviceChange();
   } else if (!strcmp(aTopic, PRESENTATION_SESSION_REQUEST_TOPIC)) {
     return HandleSessionRequest(aSubject);
+  } else if (!strcmp(aTopic, "profile-after-change")) {
+    return NS_OK;
   }
 
   MOZ_ASSERT(false, "Unexpected topic for PresentationService");

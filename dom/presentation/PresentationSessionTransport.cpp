@@ -15,6 +15,13 @@
 #include "nsIEventTarget.h"
 #include "nsIThread.h"
 
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
+#else
+#define LOG(args...)  printf(args);
+#endif
+
 namespace mozilla {
 namespace dom {
 namespace presentation {
@@ -28,6 +35,7 @@ PresentationSessionTransport::PresentationSessionTransport(nsISocketTransport* a
   : mTransport(aTransport)
   , mCallback(aCallback)
 {
+  LOG("[SessionTransport] %s", __FUNCTION__);
   //XXX find correct parameter
   nsCOMPtr<nsIInputStream> inputStream;
   mTransport->OpenInputStream(0, 0, 0, getter_AddRefs(inputStream));
@@ -50,12 +58,14 @@ PresentationSessionTransport::~PresentationSessionTransport()
 NS_IMETHODIMP
 PresentationSessionTransport::Send(nsIInputStream* aData)
 {
+  LOG("[SessionTransport] %s", __FUNCTION__);
   return mMultiplexStream->AppendStream(aData);
 }
 
 NS_IMETHODIMP
 PresentationSessionTransport::Close(nsresult aReason)
 {
+  LOG("[SessionTransport] %s", __FUNCTION__);
   mTransport->Close(aReason);
   mInputStream = nullptr;
   mOutputStream = nullptr;
@@ -69,6 +79,7 @@ PresentationSessionTransport::OnTransportStatus(nsITransport* aTransport,
                                                 uint64_t aProgress,
                                                 uint64_t aProgressMax)
 {
+  LOG("[SessionTransport] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   if (aStatus == NS_NET_STATUS_CONNECTED_TO) {
@@ -86,6 +97,7 @@ PresentationSessionTransport::OnTransportStatus(nsITransport* aTransport,
 NS_IMETHODIMP
 PresentationSessionTransport::OnInputStreamReady(nsIAsyncInputStream* aStream)
 {
+  LOG("[SessionTransport] %s", __FUNCTION__);
   uint64_t available;
   nsresult rv = aStream->Available(&available);
 
@@ -101,6 +113,7 @@ NS_IMETHODIMP
 PresentationSessionTransport::OnStartRequest(nsIRequest* aRequest,
                                              nsISupports* aContext)
 {
+  LOG("[SessionTransport] %s", __FUNCTION__);
   //XXX do nothing?
   return NS_OK;
 }
@@ -110,6 +123,7 @@ PresentationSessionTransport::OnStopRequest(nsIRequest* aRequest,
                                             nsISupports* aContext,
                                             nsresult aStatusCode)
 {
+  LOG("[SessionTransport] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   if (mCallback) {
@@ -126,6 +140,7 @@ PresentationSessionTransport::OnDataAvailable(nsIRequest* aRequest,
                                               uint64_t aOffset,
                                               uint32_t aCount)
 {
+  LOG("[SessionTransport] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   if (mCallback) {

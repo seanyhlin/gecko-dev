@@ -36,6 +36,9 @@
 #define LOG(args...)  printf(args);
 #endif
 
+#ifdef MOZ_WIDGET_GONK
+#include "nsINetworkManager.h"
+#endif
 
 using namespace mozilla::services;
 
@@ -191,10 +194,37 @@ Requester::NotifyReceiverReady()
   int32_t serverPort;
   mServerSocket->GetPort(&serverPort);
 
+  nsCString host;
+#ifdef MOZ_WIDGET_GONK
+  nsCOMPtr<nsINetworkManager> networkManager =
+    do_GetService("@mozilla.org/network/manager;1");
+  nsCOMPtr<nsINetworkInterface> active;
+  networkManager->GetActive(getter_AddRefs(active));
+  if (NS_WARN_IF(!active)) {
+    mControlChannel->Close(NS_ERROR_FAILURE);
+    return NS_OK;
+  }
+  char16_t **ips = nullptr;
+  uint32_t *prefixs = nullptr;
+  uint32_t count = 0;
+  active->GetAddresses(&ips, &prefixs, &count);
+  if (NS_WARN_IF(!count)) {
+    nsMemory::Free(prefixs);
+    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(count, ips);
+    mControlChannel->Close(NS_ERROR_FAILURE);
+    return NS_OK;
+  }
+  nsAutoString ip;
+  ip.Assign(ips[0]);
+  host = NS_ConvertUTF16toUTF8(ip);
+
+  nsMemory::Free(prefixs);
+  NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(count, ips);
+#else
   //XXX Does it really work?
   nsCOMPtr<nsIDNSService> dns = do_GetService(NS_DNSSERVICE_CONTRACTID);
-  nsCString host;
   dns->GetMyHostName(host);
+#endif
       
   nsRefPtr<PresentationChannelDescription> offer =
     new PresentationChannelDescription(host, static_cast<uint16_t>(serverPort));
@@ -283,7 +313,8 @@ NS_IMPL_ISUPPORTS_INHERITED(Responder,
                             Session,
                             nsIObserver,
                             nsITimerCallback,
-                            nsIDOMEventListener)
+                            nsIDOMEventListener,
+                            nsIPresentationControlChannelListener)
 
 bool
 Responder::Init()
@@ -399,7 +430,7 @@ Responder::OnOffer(nsIPresentationChannelDescription* aDescription)
   aDescription->GetTcpAddress(getter_AddRefs(serverHosts));
 
   nsCOMPtr<nsISocketTransportService> sts =
-    do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID);
+    do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
 
   nsCOMPtr<nsISimpleEnumerator> enumerator;
   serverHosts->Enumerate(getter_AddRefs(enumerator));
@@ -427,10 +458,10 @@ Responder::OnOffer(nsIPresentationChannelDescription* aDescription)
     nsCOMPtr<nsINetAddr> selfAddr;
     socket->GetScriptableSelfAddr(getter_AddRefs(selfAddr));
     
-    nsCString host;
-    selfAddr->GetAddress(host);
-    uint16_t port;
-    selfAddr->GetPort(&port);
+    nsCString host = NS_LITERAL_CSTRING("127.0.0.1");
+    //selfAddr->GetAddress(host);*/
+    uint16_t port = 5566;
+    //selfAddr->GetPort(&port);
     nsRefPtr<PresentationChannelDescription> answer = new PresentationChannelDescription(host, port);
     mControlChannel->SendAnswer(answer);
     break;

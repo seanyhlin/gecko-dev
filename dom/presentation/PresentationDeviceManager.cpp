@@ -208,6 +208,7 @@ PresentationDeviceManager::OnSessionRequest(nsIPresentationDevice* aDevice,
                                             const nsAString& aPresentationId,
                                             nsIPresentationControlChannel* aControlChannel)
 {
+  LOG("[DeviceManager] %s", __FUNCTION__);
   NS_ENSURE_ARG(aDevice);
   NS_ENSURE_ARG(aControlChannel);
 
