@@ -262,7 +262,7 @@ PresentationService::HandleSessionRequest(nsISupports* aSubject)
   SessionInfo* info = new SessionInfo(session, device);
 
   const fallible_t fallible = fallible_t();
-  MOZ_ASSERT(mSessionInfo.Put(id, info, fallible));
+  NS_WARN_IF(!mSessionInfo.Put(id, info, fallible));
 
   nsAutoString url;
   request->GetUrl(url);

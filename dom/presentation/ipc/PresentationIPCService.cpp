@@ -102,6 +102,7 @@ PresentationIPCService::RegisterListener(nsIPresentationListener* aListener)
 {
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.AppendElement(aListener);
+  sPresentationChild->SendRegisterHandler();
 }
 
 /* virtual */ void
@@ -109,6 +110,7 @@ PresentationIPCService::UnregisterListener(nsIPresentationListener* aListener)
 {
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.RemoveElement(aListener);
+  sPresentationChild->SendUnregisterHandler();
 }
 
 /* virtual */ void

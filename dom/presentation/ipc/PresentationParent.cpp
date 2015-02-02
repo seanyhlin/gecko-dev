@@ -16,6 +16,7 @@ using namespace mozilla::dom::presentation;
 NS_IMPL_ISUPPORTS(PresentationParent, nsIPresentationListener, nsIPresentationSessionListener)
 
 PresentationParent::PresentationParent()
+  : mActorDestroyed(false)
 {
   MOZ_COUNT_CTOR(PresentationParent);
 }
@@ -28,9 +29,8 @@ PresentationParent::PresentationParent()
 void
 PresentationParent::ActorDestroy(ActorDestroyReason aWhy)
 {
-  if (mService) {
-    mService = nullptr;
-  }
+  mActorDestroyed = false;
+  mService = nullptr;
 }
 
 bool
@@ -115,6 +115,7 @@ PresentationParent::RecvUnregisterSessionHandler(const nsString& aSessionId)
 bool
 PresentationParent::Init(PresentationService* aService)
 {
+  MOZ_ASSERT(!mService);
   mService = aService;
   return true;
 }
@@ -122,14 +123,18 @@ PresentationParent::Init(PresentationService* aService)
 NS_IMETHODIMP
 PresentationParent::NotifyAvailableChange(bool aAvailable)
 {
-  NS_WARN_IF(!SendNotifyAvailableChange(aAvailable));
+  if (mActorDestroyed || !SendNotifyAvailableChange(aAvailable)) {
+    return NS_ERROR_FAILURE;
+  }
   return NS_OK;
 }
 
 NS_IMETHODIMP
 PresentationParent::NotifySessionReady(const nsAString& aId)
 {
-  NS_WARN_IF(!SendNotifySessionReady(nsString(aId)));
+  if (mActorDestroyed || !SendNotifySessionReady(nsString(aId))) {
+    return NS_ERROR_FAILURE;
+  }
   return NS_OK;
 }
 
@@ -138,7 +143,10 @@ PresentationParent::NotifyStateChange(const nsAString& aSessionId,
                                       uint16_t aState,
                                       nsresult aReason)
 {
-  NS_WARN_IF(!SendNotifySessionStateChange(nsString(aSessionId), aState, aReason));
+  if (mActorDestroyed ||
+      !SendNotifySessionStateChange(nsString(aSessionId), aState, aReason)) {
+    return NS_ERROR_FAILURE;
+  }
   return NS_OK;
 }
 
@@ -146,7 +154,9 @@ NS_IMETHODIMP
 PresentationParent::NotifyMessage(const nsAString& aSessionId,
                                   const nsACString& aData)
 {
-  NS_WARN_IF(!SendNotifyMessage(nsString(aSessionId), nsCString(aData)));
+  if (mActorDestroyed || !SendNotifyMessage(nsString(aSessionId), nsCString(aData))) {
+    return NS_ERROR_FAILURE;
+  }
   return NS_OK;
 }
 
@@ -155,7 +165,8 @@ PresentationParent::NotifyMessage(const nsAString& aSessionId,
 NS_IMPL_ISUPPORTS(PresentationRequestParent, nsIPresentationRequestCallback)
 
 PresentationRequestParent::PresentationRequestParent(PresentationService* aService)
-  : mService(aService)
+  : mActorDestroyed(false)
+  , mService(aService)
 {
 }
 
@@ -166,16 +177,14 @@ PresentationRequestParent::~PresentationRequestParent()
 void
 PresentationRequestParent::ActorDestroy(ActorDestroyReason aWhy)
 {
+  mActorDestroyed = true;
   mService = nullptr;
 }
 
 bool
 PresentationRequestParent::DoRequest(const StartSessionRequest& aRequest)
 {
-  if (!mService) {
-    return false;
-  }
-
+  MOZ_ASSERT(mService);
   nsresult rv = mService->StartSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin(), this);
   return NS_SUCCEEDED(rv);
 }
@@ -183,10 +192,7 @@ PresentationRequestParent::DoRequest(const StartSessionRequest& aRequest)
 bool
 PresentationRequestParent::DoRequest(const JoinSessionRequest& aRequest)
 {
-  if (!mService) {
-    return false;
-  }
-  
+  MOZ_ASSERT(mService);
   nsresult rv = mService->JoinSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin());
   return NS_SUCCEEDED(rv);
 }
@@ -194,27 +200,21 @@ PresentationRequestParent::DoRequest(const JoinSessionRequest& aRequest)
 bool
 PresentationRequestParent::DoRequest(const SendMessageRequest& aRequest)
 {
+  MOZ_ASSERT(mService);
   nsTArray<mozilla::ipc::FileDescriptor> fds;
   nsCOMPtr<nsIInputStream> stream = DeserializeInputStream(aRequest.data(), fds);
   NS_WARN_IF(!stream);
 
-  nsRefPtr<PresentationService> service = PresentationService::Get();
-  NS_ENSURE_TRUE(service, false);
-
-  nsresult rv = service->SendMessageInternal(aRequest.sessionId(), stream);
-  NS_WARN_IF(NS_FAILED(rv));
-  return true;
+  nsresult rv = mService->SendMessageInternal(aRequest.sessionId(), stream);
+  return NS_SUCCEEDED(rv);
 }
 
 bool
 PresentationRequestParent::DoRequest(const CloseSessionRequest& aRequest)
 {
-  nsRefPtr<PresentationService> service = PresentationService::Get();
-  NS_ENSURE_TRUE(service, false);
-
-  nsresult rv = service->CloseSessionInternal(aRequest.sessionId());
-  NS_WARN_IF(NS_FAILED(rv));
-  return true;
+  MOZ_ASSERT(mService);
+  nsresult rv = mService->CloseSessionInternal(aRequest.sessionId());
+  return NS_SUCCEEDED(rv);
 }
 
 NS_IMETHODIMP
@@ -232,5 +232,9 @@ PresentationRequestParent::NotifyError(const nsAString& aError)
 nsresult
 PresentationRequestParent::SendResponse(const PresentationResponse& aResponse)
 {
+  if (mActorDestroyed) {
+    return NS_ERROR_FAILURE;
+  }
+
   return Send__delete__(this, aResponse) ? NS_OK : NS_ERROR_FAILURE;
 }

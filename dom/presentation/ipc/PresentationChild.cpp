@@ -60,9 +60,7 @@ bool
 PresentationChild::RecvNotifyAvailableChange(const bool& aAvailable)
 {
   MOZ_ASSERT(sPresentationService);
-  if (sPresentationService) {
-    sPresentationService->NotifyAvailableListeners(aAvailable);
-  } 
+  sPresentationService->NotifyAvailableListeners(aAvailable);
 
   return true;
 }
@@ -71,9 +69,7 @@ bool
 PresentationChild::RecvNotifySessionReady(const nsString& aId)
 {
   MOZ_ASSERT(sPresentationService);
-  if (sPresentationService) {
-    sPresentationService->NotifySessionReady(nsString(aId));
-  } 
+  sPresentationService->NotifySessionReady(nsString(aId));
 
   return true;
 }

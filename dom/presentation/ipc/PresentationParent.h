@@ -62,6 +62,7 @@ public:
 private:
   virtual ~PresentationParent();
 
+  bool mActorDestroyed;
   nsRefPtr<PresentationService> mService;
 };
 
@@ -97,6 +98,7 @@ private:
   bool
   DoRequest(const CloseSessionRequest& aRequest);
 
+  bool mActorDestroyed;
   nsRefPtr<PresentationService> mService;
 };
 
