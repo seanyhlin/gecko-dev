@@ -245,7 +245,7 @@ NS_IMETHODIMP
 Requester::OnAnswer(nsIPresentationChannelDescription* aDescription)
 {
   LOG("[Requester] %s", __FUNCTION__);
-  MOZ_ASSERT(!mTransport);
+//  MOZ_ASSERT(!mTransport);
   // PresentationSessionTransport would take care of firing sessionComplete callback
   return NS_OK;
 }

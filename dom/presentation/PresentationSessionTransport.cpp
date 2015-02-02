@@ -42,8 +42,6 @@ PresentationSessionTransport::PresentationSessionTransport(nsISocketTransport* a
   mTransport->OpenOutputStream(0, 0, 0, getter_AddRefs(mOutputStream));
   mMultiplexStream = do_CreateInstance(NS_MULTIPLEXINPUTSTREAM_CONTRACTID);
 
-  nsCOMPtr<nsIEventTarget> sts = do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
-  NS_AsyncCopy(mMultiplexStream, mOutputStream, sts, NS_ASYNCCOPY_VIA_READSEGMENTS, 4096, nullptr, nullptr, false, false, nullptr, nullptr);
   mTransport->SetEventSink(this, NS_GetCurrentThread());
 
   mInputStream = do_QueryInterface(inputStream);
@@ -65,7 +63,14 @@ NS_IMETHODIMP
 PresentationSessionTransport::Send(nsIInputStream* aData)
 {
   LOG("[SessionTransport] %s", __FUNCTION__);
-  return mMultiplexStream->AppendStream(aData);
+  mMultiplexStream->AppendStream(aData);
+
+  nsCOMPtr<nsIEventTarget> sts = do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
+  NS_AsyncCopy(mMultiplexStream, mOutputStream, sts,
+               NS_ASYNCCOPY_VIA_READSEGMENTS, 4096,
+               nullptr, nullptr, false, false, nullptr, nullptr);
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
