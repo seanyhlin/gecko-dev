@@ -2376,7 +2376,7 @@ QuotaManager::EnsureOriginIsInitialized(PersistenceType aPersistenceType,
 
       timestamp = ts;
 
-      MOZ_ASSERT(timestamp <= PR_Now());
+//      MOZ_ASSERT(timestamp <= PR_Now());
     }
 
     rv = InitializeOrigin(aPersistenceType, aGroup, aOrigin, aIsApp,
