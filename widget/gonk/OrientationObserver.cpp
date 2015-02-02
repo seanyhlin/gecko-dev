@@ -268,9 +268,7 @@ OrientationObserver::LockScreenOrientation(ScreenOrientation aOrientation)
                              eScreenOrientation_Default));
 
   if (aOrientation == eScreenOrientation_Default) {
-    aOrientation = (sOrientationOffset == sDefaultPortrait) ?
-                    eScreenOrientation_PortraitPrimary :
-                    eScreenOrientation_LandscapePrimary;
+    aOrientation = eScreenOrientation_LandscapePrimary;
   }
 
   // If there are multiple orientations allowed, we should enable the
