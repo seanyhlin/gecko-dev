@@ -21,7 +21,7 @@ PresentationChild* sPresentationChild;
 
 } // anonymous
 
-/* static */ PresentationIPCService*
+/* static */ already_AddRefed<PresentationIPCService>
 PresentationIPCService::Create()
 {
   ContentChild* contentChild = ContentChild::GetSingleton();
@@ -29,10 +29,10 @@ PresentationIPCService::Create()
     return nullptr;
   }
 
-  PresentationIPCService* service = new PresentationIPCService();
+  nsRefPtr<PresentationIPCService> service = new PresentationIPCService();
   sPresentationChild = new PresentationChild(service);
   contentChild->SendPPresentationConstructor(sPresentationChild);
-  return service;
+  return service.forget();
 }
 
 PresentationIPCService::~PresentationIPCService()
@@ -102,7 +102,7 @@ PresentationIPCService::RegisterListener(nsIPresentationListener* aListener)
 {
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.AppendElement(aListener);
-  sPresentationChild->SendRegisterHandler();
+  NS_WARN_IF(!sPresentationChild->SendRegisterHandler());
 }
 
 /* virtual */ void
@@ -110,7 +110,7 @@ PresentationIPCService::UnregisterListener(nsIPresentationListener* aListener)
 {
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.RemoveElement(aListener);
-  sPresentationChild->SendUnregisterHandler();
+  NS_WARN_IF(!sPresentationChild->SendUnregisterHandler());
 }
 
 /* virtual */ void
@@ -142,6 +142,10 @@ PresentationIPCService::NotifySessionStateChange(const nsAString& aSessionId,
   nsCOMPtr<nsIPresentationSessionListener> listener;
   if (NS_WARN_IF(!mSessionListeners.Get(aSessionId, getter_AddRefs(listener)))) {
     return NS_OK;
+  }
+
+  if (aState == nsIPresentationSessionListener::STATE_DISCONNECTED) {
+    mSessionListeners.Remove(aSessionId);
   }
 
   return listener->NotifyStateChange(aSessionId, aState, aReason);

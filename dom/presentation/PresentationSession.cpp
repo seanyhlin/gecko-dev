@@ -82,7 +82,7 @@ PresentationSession::Init()
   mOrigin = NS_ConvertUTF8toUTF16(origin);
 
   // Register session listener.
-  PresentationService* service = PresentationService::Get();
+  nsRefPtr<PresentationService> service = PresentationService::Get();
   NS_ENSURE_TRUE(service, false);
 
   service->RegisterSessionListener(mId, this);
@@ -93,7 +93,7 @@ PresentationSession::Init()
 void
 PresentationSession::Shutdown()
 {
-  PresentationService* service = PresentationService::Get();
+  nsRefPtr<PresentationService> service = PresentationService::Get();
   NS_ENSURE_TRUE_VOID(service);
 
   service->UnregisterSessionListener(mId, this);
@@ -142,7 +142,7 @@ PresentationSession::Send(const nsAString& aData,
     return;
   }
 
-  PresentationService* service = PresentationService::Get();
+  nsRefPtr<PresentationService> service = PresentationService::Get();
   if(NS_WARN_IF(!service)) {
     aRv.Throw(NS_ERROR_DOM_ABORT_ERR);
     return;
@@ -164,7 +164,7 @@ PresentationSession::Disconnect(ErrorResult& aRv)
     return;
   }
 
-  PresentationService* service = PresentationService::Get();
+  nsRefPtr<PresentationService> service = PresentationService::Get();
   if(NS_WARN_IF(!service)) {
     aRv.Throw(NS_ERROR_DOM_ABORT_ERR);
     return;
@@ -211,7 +211,7 @@ PresentationSession::NotifyStateChange(const nsAString& aSessionId,
   }
 
   if (aState == nsIPresentationSessionListener::STATE_DISCONNECTED) {
-    PresentationService* service = PresentationService::Get();
+    nsRefPtr<PresentationService> service = PresentationService::Get();
     NS_ENSURE_TRUE(service, NS_ERROR_DOM_ABORT_ERR);
 
     service->UnregisterSessionListener(mId, this);

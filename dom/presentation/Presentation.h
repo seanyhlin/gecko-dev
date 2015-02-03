@@ -66,8 +66,11 @@ public:
   IMPL_EVENT_HANDLER(availablechange);
 
 private:
-  virtual ~Presentation();
+  ~Presentation();
+
   bool Init();
+
+  void Shutdown();
 
   bool mAvailable;
   nsRefPtr<PresentationSession> mSession;

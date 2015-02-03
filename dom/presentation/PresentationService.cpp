@@ -12,7 +12,6 @@
 #include "nsIObserverService.h"
 #include "nsIPresentationControlChannel.h"
 #include "nsIPresentationDeviceManager.h" // Topic
-#include "nsITimer.h"
 #include "nsPrintfCString.h"
 #include "nsServiceManagerUtils.h" // do_GetService
 #include "nsXULAppAPI.h" // XRE_GetProcessType
@@ -21,6 +20,7 @@
 #include "PresentationSessionRequest.h"
 
 #include "mozIApplication.h"
+#include "mozilla/ClearOnShutdown.h"
 #include "mozilla/Services.h" // namespace
 #include "mozilla/StaticPtr.h"
 #include "mozilla/dom/presentation/PresentationIPCService.h"
@@ -91,7 +91,10 @@ PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aD
   nsCOMPtr<nsIPresentationControlChannel> ctrlChannel;
   if (NS_FAILED(aDevice->EstablishControlChannel(mRequestUrl, mId,
                                                  getter_AddRefs(ctrlChannel)))) {
-    sPresentationService->ReplyRequestWithError(mId,NS_LITERAL_STRING("NoControlChannel"));
+    nsresult rv = sPresentationService->ReplyRequestWithError(mId,NS_LITERAL_STRING("NoControlChannel"));
+    if(NS_WARN_IF(NS_FAILED(rv))) {
+      return rv;
+    }
     sPresentationService->mSessionInfo.Remove(mId);
     return NS_OK;
   }
@@ -106,7 +109,10 @@ NS_IMETHODIMP
 PresentationService::PresentationDeviceRequest::Cancel()
 {
   LOG("[Service] %s", __FUNCTION__);
-  sPresentationService->ReplyRequestWithError(mId, NS_LITERAL_STRING("UserCanceled"));
+  nsresult rv = sPresentationService->ReplyRequestWithError(mId, NS_LITERAL_STRING("UserCanceled"));
+  if(NS_WARN_IF(NS_FAILED(rv))) {
+    return rv;
+  }
   sPresentationService->mSessionInfo.Remove(mId);
   return NS_OK;
 }
@@ -119,31 +125,37 @@ NS_IMPL_ISUPPORTS(PresentationService::PresentationDeviceRequest,
 
 NS_IMPL_ISUPPORTS(PresentationService, nsIObserver)
 
-/* static */ PresentationService*
+/* static */ already_AddRefed<PresentationService>
 PresentationService::Get()
 {
   MOZ_ASSERT(NS_IsMainThread());
 
-  if (sPresentationService) {
-    return sPresentationService;
+  nsRefPtr<PresentationService> service;
+  if (!sPresentationService) {
+    service = PresentationService::Create();
+    sPresentationService = service;
+    if (NS_WARN_IF(!sPresentationService)) {
+      return nullptr;
+    }
+    ClearOnShutdown(&sPresentationService);
+  } else {
+    service = sPresentationService.get();
   }
 
-  sPresentationService = PresentationService::Create();
-  if (NS_WARN_IF(!sPresentationService)) {
-    return nullptr;
-  }
-
-  return sPresentationService;
+  return service.forget();
 }
 
-/* static */ PresentationService*
+/* static */ already_AddRefed<PresentationService>
 PresentationService::Create()
 {
+  nsRefPtr<PresentationService> service;
   if (XRE_GetProcessType() != GeckoProcessType_Default) {
-    return PresentationIPCService::Create();
+    service = PresentationIPCService::Create();
+  } else {
+    service = new PresentationService();
   }
 
-  return new PresentationService();
+  return service.forget();
 }
 
 PresentationService::PresentationService()
@@ -181,8 +193,8 @@ PresentationService::Init()
     return false;
   }
 
-  deviceManager->GetDeviceAvailable(&mAvailable);
-  return true;
+  nsresult rv = deviceManager->GetDeviceAvailable(&mAvailable);
+  return (NS_WARN_IF(NS_FAILED(rv))) ? false : true;
 }
 
 nsresult
@@ -197,7 +209,9 @@ PresentationService::HandleShutdown()
 
   obs->RemoveObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID);
   obs->RemoveObserver(this, PRESENTATION_DEVICE_CHANGE_TOPIC);
+  obs->RemoveObserver(this, PRESENTATION_SESSION_REQUEST_TOPIC);
 
+  mListeners.Clear();
   mSessionInfo.Clear();
 
   return NS_OK;
@@ -241,13 +255,19 @@ PresentationService::HandleDeviceChange()
 {
   nsCOMPtr<nsIPresentationDeviceManager> deviceManager =
     do_GetService(PRESENTATION_DEVICE_MANAGER_CONTRACTID);
-  if (deviceManager) {
-    bool available;
-    deviceManager->GetDeviceAvailable(&available);
-    if (available != mAvailable) {
-      mAvailable = available;
-      NotifyAvailableListeners(mAvailable);
-    }
+  if (NS_WARN_IF(!deviceManager)) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
+  bool available;
+  nsresult rv = deviceManager->GetDeviceAvailable(&available);
+  if (NS_WARN_IF(NS_FAILED(rv))) {
+    return rv;
+  }
+
+  if (available != mAvailable) {
+    mAvailable = available;
+    NotifyAvailableListeners(mAvailable);
   }
   return NS_OK;
 }
@@ -411,7 +431,7 @@ PresentationService::JoinSessionInternal(const nsAString& aUrl,
 
   SessionInfo* info = mSessionInfo.Get(aSessionId);
   if (NS_WARN_IF(!info)) {
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_NOT_AVAILABLE;
   }
 
   return NS_OK;
@@ -570,14 +590,25 @@ PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
     info->listener = nullptr;
   }
 
+  // Responder.
   if (!info->isRequester) {
     info->session = nullptr;
     info->device = nullptr;
-  } else if (info->callback) {
-    ReplyRequestWithError(aSession->Id(), NS_LITERAL_STRING("FailedToEstablishSession"));
-    info->callback = nullptr;
+    return NS_OK;
   }
 
+  // Requester - remove the session since it hasn't been successfully set up.
+  if (info->callback) {
+    nsresult rv = ReplyRequestWithError(aSession->Id(), NS_LITERAL_STRING("FailedToEstablishSession"));
+    if(NS_WARN_IF(NS_FAILED(rv))) {
+      return rv;
+    }
+    info->callback = nullptr;
+    mSessionInfo.Remove(aSession->Id());
+    return NS_OK;
+  }
+
+  // Reqeuster - remove the session once it gets closed successfully.
   if (NS_SUCCEEDED(aReason)) {
     mSessionInfo.Remove(aSession->Id());
   }

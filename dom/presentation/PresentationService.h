@@ -18,7 +18,6 @@
 #include "PresentationSessionTransport.h"
 
 class nsIInputStream;
-class nsITimer;
 
 namespace mozilla {
 namespace dom {
@@ -39,7 +38,7 @@ public:
    * it's in the child process, an object of PresentationIPCService is returned.
    * Must called from main thread.
    */
-  static PresentationService*
+  static already_AddRefed<PresentationService>
   Get();
 
   /**
@@ -145,7 +144,7 @@ private:
    * Otherwise, create an instance of PresentationIPCService if it's in the
    * child process.
    */
-  static PresentationService*
+  static already_AddRefed<PresentationService>
   Create();
 
   bool

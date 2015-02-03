@@ -107,7 +107,16 @@ SessionCallback::NotifyError(const nsAString& aError)
 
 // Presentation
 
-NS_IMPL_CYCLE_COLLECTION_INHERITED(Presentation, DOMEventTargetHelper, mSession)
+NS_IMPL_CYCLE_COLLECTION_CLASS(Presentation)
+
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(Presentation, DOMEventTargetHelper)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE(mSession)
+NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
+
+NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN_INHERITED(Presentation, DOMEventTargetHelper)
+  tmp->Shutdown();
+  NS_IMPL_CYCLE_COLLECTION_UNLINK(mSession)
+NS_IMPL_CYCLE_COLLECTION_UNLINK_END
 
 NS_IMPL_ADDREF_INHERITED(Presentation, DOMEventTargetHelper)
 NS_IMPL_RELEASE_INHERITED(Presentation, DOMEventTargetHelper)
@@ -133,20 +142,16 @@ Presentation::Presentation(nsPIDOMWindow* aWindow)
   NS_WARN_IF(!Init());
 }
 
-/* virtual */ Presentation::~Presentation()
+Presentation::~Presentation()
 {
-  PresentationService* service = PresentationService::Get();
-  if (!NS_WARN_IF(service)) {
-    return;
-  }
-  service->UnregisterListener(this);
+  Shutdown();
 }
 
 bool
 Presentation::Init()
 {
-  PresentationService* service = PresentationService::Get();
-  if (!service) {
+  nsRefPtr<PresentationService> service = PresentationService::Get();
+  if (NS_WARN_IF(!service)) {
     return false;
   }
   service->RegisterListener(this);
@@ -156,6 +161,15 @@ Presentation::Init()
   deviceManager->GetDeviceAvailable(&mAvailable);
 
   return true;
+}
+
+void Presentation::Shutdown()
+{
+  nsRefPtr<PresentationService> service = PresentationService::Get();
+  if (NS_WARN_IF(!service)) {
+    return;
+  }
+  service->UnregisterListener(this);
 }
 
 /* virtual */ JSObject*
@@ -192,7 +206,7 @@ Presentation::StartSession(const nsAString& aUrl,
     return nullptr;
   }
 
-  PresentationService* service = PresentationService::Get();
+  nsRefPtr<PresentationService> service = PresentationService::Get();
   if(NS_WARN_IF(!service)) {
     promise->MaybeReject(NS_ERROR_NOT_AVAILABLE);
     return promise.forget();
@@ -253,7 +267,7 @@ Presentation::JoinSession(const nsAString& aUrl,
     return nullptr;
   }
 
-  PresentationService* service = PresentationService::Get();
+  nsRefPtr<PresentationService> service = PresentationService::Get();
   if(NS_WARN_IF(!service)) {
     promise->MaybeReject(NS_ERROR_NOT_AVAILABLE);
     return promise.forget();

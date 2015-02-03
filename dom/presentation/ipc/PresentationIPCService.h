@@ -21,7 +21,7 @@ class PresentationRequest;
 class PresentationIPCService MOZ_FINAL : public PresentationService
 {
 public:
-  static PresentationIPCService* Create();
+  static already_AddRefed<PresentationIPCService> Create();
 
   virtual nsresult
   StartSessionInternal(const nsAString& aUrl,

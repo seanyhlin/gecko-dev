@@ -5,7 +5,7 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #ifndef mozilla_dom_presentation_PresentationChild_h
-#define mozilla_dom_presentaiton_PresentationChild_h
+#define mozilla_dom_presentation_PresentationChild_h
 
 #include "mozilla/dom/presentation/PPresentationChild.h"
 #include "mozilla/dom/presentation/PPresentationRequestChild.h"
