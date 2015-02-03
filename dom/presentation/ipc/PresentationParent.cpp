@@ -30,6 +30,7 @@ void
 PresentationParent::ActorDestroy(ActorDestroyReason aWhy)
 {
   mActorDestroyed = false;
+  mService->UnregisterListener(this);
   mService = nullptr;
 }
 
