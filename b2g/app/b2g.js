@@ -298,7 +298,7 @@ pref("gfx.content.azure.backends", "cairo");
 #endif
 
 // Presetation Demo Devices [format: "<name>:<ip-address>,[more entries]"
-pref("dom.presentation.demo.devices", "self:127.0.0.1");
+pref("dom.presentation.demo.devices", "");
 pref("dom.presentation.enabled", true);
 
 // Web Notifications
