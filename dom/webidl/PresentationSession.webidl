@@ -10,11 +10,6 @@
  * W3C liability, trademark and document use rules apply.
  */
 
-enum PresentationSessionState {
-  "connected",
-  "disconnected"
-};
-
 [Pref="dom.presentation.enabled", AvailableIn="PrivilegedApps"]
 interface PresentationSession : EventTarget {
   /**
@@ -27,7 +22,9 @@ interface PresentationSession : EventTarget {
    *                   session. Listen |onmessage| to receive messages.
    * @value disconnected: No operation is allowed at this state.
    */
-  readonly attribute PresentationSessionState state;
+  // FIXME: should define a enumeration for session state, however, event
+  // generator doesn't supprot attributes with enum values.
+  readonly attribute boolean state;
 
   /**
    * It is called when session state changes. New value is dispatched with

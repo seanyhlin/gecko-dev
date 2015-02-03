@@ -86,7 +86,7 @@ SessionCallback::NotifySuccess()
 
   // At the sender side, this function must get called after the transport
   // channel is ready. So we simply set the session state as connected.
-  session->SetState(PresentationSessionState::Connected);
+  session->SetState(true);
 
   nsAutoString id;
   session->GetId(id);

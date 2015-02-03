@@ -4,6 +4,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#include "mozilla/dom/PresentationMessageEvent.h"
+#include "mozilla/dom/PresentationStateEvent.h"
 #include "PresentationService.h"
 #include "PresentationSession.h"
 #include "nsIDOMMessageEvent.h"
@@ -41,7 +43,7 @@ PresentationSession::PresentationSession(nsPIDOMWindow* aWindow,
                                          const nsAString& aId)
   : DOMEventTargetHelper(aWindow)
   , mId(aId)
-  , mState(PresentationSessionState::Disconnected)
+  , mState(false)
 {
 }
 
@@ -109,7 +111,7 @@ PresentationSession::GetId(nsAString& aId) const
   aId = mId;
 }
 
-PresentationSessionState
+bool
 PresentationSession::State() const
 {
   return mState;
@@ -121,7 +123,7 @@ PresentationSession::Send(const nsAString& aData,
 {
   LOG("[PresentationSession] %s", __FUNCTION__);
   // Sending is not allowed if the socket is not connected.
-  if (NS_WARN_IF(mState != PresentationSessionState::Connected)) {
+  if (NS_WARN_IF(!mState)) {
     aRv.Throw(NS_ERROR_DOM_INVALID_STATE_ERR);
     return;
   }
@@ -157,7 +159,7 @@ PresentationSession::Disconnect(ErrorResult& aRv)
 {
   LOG("[PresentationSession] %s", __FUNCTION__);
   // Closing is not allowed if the socket is not connected.
-  if (NS_WARN_IF(mState != PresentationSessionState::Connected)) {
+  if (NS_WARN_IF(!mState)) {
     aRv.Throw(NS_ERROR_DOM_INVALID_STATE_ERR);
     return;
   }
@@ -175,7 +177,7 @@ PresentationSession::Disconnect(ErrorResult& aRv)
 }
 
 nsresult
-PresentationSession::SetState(PresentationSessionState aState)
+PresentationSession::SetState(bool aState)
 {
   LOG("[PresentationSession] %s", __FUNCTION__);
   if (mState == aState) {
@@ -184,7 +186,12 @@ PresentationSession::SetState(PresentationSessionState aState)
 
   mState = aState;
 
-  return DispatchTrustedEvent(NS_LITERAL_STRING("statechange"));
+  PresentationStateEventInit init;
+  init.mState = aState;;
+  nsRefPtr<PresentationStateEvent> event =
+    PresentationStateEvent::Constructor(this, NS_LITERAL_STRING("statechange"), init);
+
+  return DispatchTrustedEvent(event);
 }
 
 NS_IMETHODIMP
@@ -200,7 +207,7 @@ PresentationSession::NotifyStateChange(const nsAString& aSessionId,
   NS_WARN_IF(NS_FAILED(aReason));
 
   if (aState == nsIPresentationSessionListener::STATE_CONNECTED) {
-    return SetState(PresentationSessionState::Connected);
+    return SetState(true);
   }
 
   if (aState == nsIPresentationSessionListener::STATE_DISCONNECTED) {
@@ -208,8 +215,7 @@ PresentationSession::NotifyStateChange(const nsAString& aSessionId,
     NS_ENSURE_TRUE(service, NS_ERROR_DOM_ABORT_ERR);
 
     service->UnregisterSessionListener(mId, this);
-
-    return SetState(PresentationSessionState::Disconnected);
+    return SetState(false);
   }
 
   return NS_ERROR_INVALID_ARG;
@@ -225,7 +231,7 @@ PresentationSession::NotifyMessage(const nsAString& aSessionId,
   }
 
   // No message should be expected when session is not connected.
-  if (NS_WARN_IF(mState != PresentationSessionState::Connected)) {
+  if (NS_WARN_IF(!mState)) {
     return NS_ERROR_DOM_INVALID_STATE_ERR;
   }
 
@@ -250,7 +256,7 @@ nsresult
 PresentationSession::DispatchMessageEvent(JS::Handle<JS::Value> aData)
 {
   LOG("[PresentationSession] %s", __FUNCTION__);
-  nsCOMPtr<nsIDOMEvent> event;
+/*  nsCOMPtr<nsIDOMEvent> event;
   nsresult rv = NS_NewDOMMessageEvent(getter_AddRefs(event), this, nullptr, nullptr);
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -261,5 +267,10 @@ PresentationSession::DispatchMessageEvent(JS::Handle<JS::Value> aData)
   NS_ENSURE_SUCCESS(rv, rv);
 
   event->SetTrusted(true);
-  return DispatchDOMEvent(nullptr, event, nullptr, nullptr);
+  return DispatchDOMEvent(nullptr, event, nullptr, nullptr);*/
+  PresentationMessageEventInit init;
+  init.mData = aData;
+  nsRefPtr<PresentationMessageEvent> event =
+    PresentationMessageEvent::Constructor(this, NS_LITERAL_STRING("message"), init);
+  return DispatchTrustedEvent(event); 
 }

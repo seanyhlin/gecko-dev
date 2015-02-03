@@ -33,13 +33,13 @@ public:
 
   virtual JSObject* WrapObject(JSContext* aCx) MOZ_OVERRIDE;
 
-  nsresult SetState(PresentationSessionState aState);
+  nsresult SetState(bool aState);
 
   // WebIDL (public APIs)
 
   void GetId(nsAString& aId) const;
 
-  PresentationSessionState State() const;
+  bool State() const;
 
   void Send(const nsAString& aData,
             ErrorResult& aRv);
@@ -62,7 +62,7 @@ private:
   nsresult DispatchMessageEvent(JS::Handle<JS::Value> aData);
 
   nsString mId;
-  PresentationSessionState mState;
+  bool mState;
   nsString mOrigin;
 };
 
