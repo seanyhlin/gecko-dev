@@ -536,6 +536,7 @@ Session::CreateResponder(const nsAString& aId,
 nsresult
 Session::Send(nsIInputStream* aData)
 {
+  LOG("[Session] %s", __FUNCTION__);
   NS_ENSURE_TRUE(mTransport, NS_ERROR_NOT_AVAILABLE);
 
   return mTransport->Send(aData);
@@ -544,6 +545,7 @@ Session::Send(nsIInputStream* aData)
 nsresult
 Session::Close(nsresult aReason)
 {
+  LOG("[Session] %s", __FUNCTION__);
   if (mTransport) {
     return mTransport->Close(aReason);
   }
@@ -555,6 +557,7 @@ Session::Close(nsresult aReason)
 NS_IMETHODIMP
 Session::OnComplete()
 {
+  LOG("[Session] %s", __FUNCTION__);
   mService->OnSessionComplete(this);
   return NS_OK;
 }
@@ -562,6 +565,7 @@ Session::OnComplete()
 NS_IMETHODIMP
 Session::OnData(const nsACString& aData)
 {
+  LOG("[Session] %s", __FUNCTION__);
   mService->OnSessionMessage(this, aData);
   return NS_OK;
 }
@@ -569,6 +573,7 @@ Session::OnData(const nsACString& aData)
 NS_IMETHODIMP
 Session::OnClose(nsresult aReason)
 {
+  LOG("[Session] %s", __FUNCTION__);
   mService->OnSessionClose(this, aReason);
   return NS_OK;
 }

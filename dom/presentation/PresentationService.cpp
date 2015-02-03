@@ -150,7 +150,7 @@ PresentationService::PresentationService()
   : mAvailable(false)
   , mSessionInfo(128)
 {
-  NS_WARN_IF_FALSE(Init(), "Failed to initialize PresentationService.");
+  NS_WARN_IF(!Init());
 }
 
 /* virtual */ PresentationService::~PresentationService()
@@ -331,7 +331,7 @@ nsresult
 PresentationService::ReplyRequestWithError(const nsAString& aId,
                                            const nsAString& aError)
 {
-  printf("ReplyRequestWithError\n");
+  LOG("ReplyRequestWithError");
   SessionInfo* info = mSessionInfo.Get(aId);
   if (NS_WARN_IF(!info)) {
     return NS_ERROR_NOT_AVAILABLE;
@@ -356,11 +356,10 @@ PresentationService::StartSessionInternal(const nsAString& aUrl,
   MOZ_ASSERT(aCallback);
   LOG("[Service] %s", __FUNCTION__);
 
-  // HACK
-/*  if (!mAvailable) {
+  if (!mAvailable) {
     aCallback->NotifyError(NS_LITERAL_STRING("NoAvailableDevice"));
     return NS_OK;
-  }*/
+  }
 
   // Create SessionInfo and set SessionInfo.callback. The callback is called
   // when the request is finished.
@@ -503,7 +502,6 @@ PresentationService::OnSessionComplete(Session* aSession)
   // Session transport has been established, so notify the listener of the state
   // change and invoke callback if any.
   nsCOMPtr<nsIPresentationSessionListener> listener = info->listener;
-//  NS_WARN_IF(!listener);
   if (listener) {
     nsresult rv = listener->NotifyStateChange(aSession->Id(),
                                               nsIPresentationSessionListener::STATE_CONNECTED,
@@ -560,11 +558,13 @@ PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
 nsresult
 PresentationService::OnSessionMessage(Session* aSession, const nsACString& aMessage)
 {
+  LOG("[Service] %s", __FUNCTION__);
   NS_ENSURE_ARG_POINTER(aSession);
 
   SessionInfo* info = mSessionInfo.Get(aSession->Id());
   NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
   NS_ENSURE_TRUE(info->listener, NS_ERROR_NOT_AVAILABLE);
 
+  LOG("[Service] going to notify message");
   return info->listener->NotifyMessage(aSession->Id(), aMessage);
 }

@@ -575,7 +575,7 @@ DemoDeviceProvider.prototype = {
   },
 
   _removeAllDevices: function() {
-    for (let device in Object.keys(devices)) {
+    for (let device of Object.keys(devices)) {
     log("DemoDeviceProvider - remove device: " + device);
       this._listener.removeDevice(devices[device]);
     }
