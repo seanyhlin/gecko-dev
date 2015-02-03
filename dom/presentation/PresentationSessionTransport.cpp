@@ -36,6 +36,21 @@ PresentationSessionTransport::PresentationSessionTransport(nsISocketTransport* a
   , mCallback(aCallback)
 {
   LOG("[SessionTransport] %s", __FUNCTION__);
+  Init();
+}
+
+PresentationSessionTransport::PresentationSessionTransport(nsISocketTransport* aTransport, nsIPresentationSessionTransportCallback* aCallback, bool aDummy)
+  : mTransport(aTransport)
+  , mCallback(aCallback)
+{
+  LOG("[SessionTransport] %s", __FUNCTION__);
+  Init();
+  OnTransportStatus(mTransport, NS_NET_STATUS_CONNECTED_TO, 0, 0);
+}
+
+void
+PresentationSessionTransport::Init()
+{
   //XXX find correct parameter
   nsCOMPtr<nsIInputStream> inputStream;
   mTransport->OpenInputStream(0, 0, 0, getter_AddRefs(inputStream));
@@ -46,12 +61,6 @@ PresentationSessionTransport::PresentationSessionTransport(nsISocketTransport* a
 
   mInputStream = do_QueryInterface(inputStream);
   mInputStream->AsyncWait(this, 0, 0, NS_GetCurrentThread());
-}
-
-PresentationSessionTransport::PresentationSessionTransport(nsISocketTransport* aTransport, nsIPresentationSessionTransportCallback* aCallback, bool aDummy)
-  : PresentationSessionTransport(aTransport, aCallback)
-{
-  OnTransportStatus(mTransport, NS_NET_STATUS_CONNECTED_TO, 0, 0);
 }
 
 PresentationSessionTransport::~PresentationSessionTransport()

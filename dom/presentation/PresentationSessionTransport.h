@@ -47,6 +47,7 @@ public:
 
 private:
   virtual ~PresentationSessionTransport();
+  void Init();
 
   nsCOMPtr<nsISocketTransport> mTransport;
   nsRefPtr<nsIPresentationSessionTransportCallback> mCallback;
