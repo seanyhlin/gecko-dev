@@ -174,14 +174,14 @@ PresentationServer.prototype = {
           }
         }
         if (!dev) {
-          //XXX workabournd for b2g device that cannot receive multicast
+          //XXX auto add device that not in device list
           log("PresentationServer - handle requestSession - create device");
           let manager = Cc["@mozilla.org/presentation-device/demo-provider;1"]
                           .getService(Ci.nsIPresentationDeviceProvider);
-          dev = new DemoDevice(device.name, {name: device.name,
-                                             host: device.ip,
-                                             port: device.port});
-          devices[device] = dev;
+          dev = new DemoDevice({name: device.ip,
+                                host: device.ip,
+                                port: SIGNALING_PORT});
+          devices[device.ip] = dev;
           manager.listener.QueryInterface(Ci.nsIPresentationDeviceListener).addDevice(dev);
         }
         dev.onRequestSession(msg.url, msg.presentationId);
@@ -510,17 +510,23 @@ var devices = {};
 function DemoDeviceProvider() {
   log("create DemoDeviceProvider");
   Services.obs.addObserver(this, "network-active-changed", false);
+  Services.prefs.addObserver("dom.presentation.demo.devices", this, false);
 }
 
 DemoDeviceProvider.prototype = {
   loadDevices: function() {
     let deviceList = Services.prefs.getCharPref("dom.presentation.demo.devices");
     let devices = [];
-    deviceList.split(',').forEach(function(str) {
+    deviceList.trim().split(',').forEach(function(str) {
+      str = str.trim();
+      if (!str) {
+        return;
+      }
+
       let tokens = str.split(':');
       devices.push({
-        name: tokens[0],
-        host: tokens[1],
+        name: tokens[0].trim(),
+        host: tokens[1].trim(),
         port: SIGNALING_PORT, //Number.parseInt(tokens[2], 10);
       });
     });
@@ -552,6 +558,21 @@ DemoDeviceProvider.prototype = {
 
   observe: function(subject, topic, data) {
     log("DemoDeviceProvider - observe: " + topic);
+    switch (topic) {
+      case "nsPref:changed": {
+        this._prefChanged(subject, topic, data);
+        break;
+      }
+      case "network-active-changed": {
+        this._networkChanged(subject, topic, data);
+        break;
+      }
+    }
+  },
+  _prefChanged: function(subject, topic, data) {
+    this.forceDiscovery();
+  },
+  _networkChanged: function(subject, topic, data) {
     if (!subject) {
       log("No active network");
       return;
