@@ -148,6 +148,7 @@ PresentationService::Create()
 
 PresentationService::PresentationService()
   : mAvailable(false)
+  , mPendingSessionReady(false)
   , mSessionInfo(128)
 {
   NS_WARN_IF(!Init());
@@ -205,6 +206,11 @@ PresentationService::HandleShutdown()
 void
 PresentationService::NotifyAvailableListeners(bool aAvailable)
 {
+  LOG("[Service] %s", __FUNCTION__);
+  if (!mListeners.Length()) {
+    LOG("[Service] No listenr is registered.");
+  }
+
   nsTObserverArray<nsCOMPtr<nsIPresentationListener> >::ForwardIterator iter(mListeners);
   while (iter.HasMore()) {
     nsIPresentationListener* listener = iter.GetNext();
@@ -216,6 +222,13 @@ void
 PresentationService::NotifySessionReady(const nsAString& aId)
 {
   LOG("[Service] %s", __FUNCTION__);
+  if (!mListeners.Length()) {
+    LOG("[Service] No listenr is registered.")
+    mPendingSessionReady = true;
+    mPendingSessionId = aId;
+    return;
+  }
+
   nsTObserverArray<nsCOMPtr<nsIPresentationListener> >::ForwardIterator iter(mListeners);
   while (iter.HasMore()) {
     nsIPresentationListener* listener = iter.GetNext();
@@ -232,7 +245,8 @@ PresentationService::HandleDeviceChange()
     bool available;
     deviceManager->GetDeviceAvailable(&available);
     if (available != mAvailable) {
-      NotifyAvailableListeners(available);
+      mAvailable = available;
+      NotifyAvailableListeners(mAvailable);
     }
   }
   return NS_OK;
@@ -356,6 +370,14 @@ PresentationService::StartSessionInternal(const nsAString& aUrl,
   MOZ_ASSERT(aCallback);
   LOG("[Service] %s", __FUNCTION__);
 
+  nsCOMPtr<nsIPresentationDeviceManager> deviceManager =
+    do_GetService(PRESENTATION_DEVICE_MANAGER_CONTRACTID);
+  if (deviceManager) {
+    bool available;
+    deviceManager->GetDeviceAvailable(&available);
+    LOG("available: %d, mAvailable: %d", available, mAvailable);
+  }
+ 
   if (!mAvailable) {
     aCallback->NotifyError(NS_LITERAL_STRING("NoAvailableDevice"));
     return NS_OK;
@@ -435,13 +457,21 @@ PresentationService::CloseSessionInternal(const nsAString& aSessionId)
 /* virtual */ void
 PresentationService::RegisterListener(nsIPresentationListener* aListener)
 {
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.AppendElement(aListener);
+
+  if (mPendingSessionReady) {
+    mPendingSessionReady = false;
+    NotifySessionReady(mPendingSessionId);
+    mPendingSessionId.Truncate();
+  }
 }
 
 /* virtual */ void
 PresentationService::UnregisterListener(nsIPresentationListener* aListener)
 {
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.RemoveElement(aListener);
 }

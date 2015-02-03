@@ -167,6 +167,8 @@ private:
   ReplyRequestWithError(const nsAString& aId, const nsAString& aError);
 
   bool mAvailable;
+  bool mPendingSessionReady;
+  nsString mPendingSessionId;
 
   class PresentationDeviceRequest MOZ_FINAL : public nsIPresentationDeviceRequest
   {

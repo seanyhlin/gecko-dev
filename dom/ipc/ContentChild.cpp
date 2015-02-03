@@ -1352,17 +1352,6 @@ ContentChild::DeallocPPresentationChild(PPresentationChild* aActor)
     return true;
 }
 
-/*PPresentationChild*
-ContentChild::SendPPresentationConstructor(PresentationIPCService* aActor)
-{
-   aActor = PContentChild::SendPPresentationConstructor(aActor);
-   if (aActor) {
-       aActor->AddRef();
-   }
-
-   return aActor;
-}*/
-
 PCrashReporterChild*
 ContentChild::AllocPCrashReporterChild(const mozilla::dom::NativeThreadId& id,
                                        const uint32_t& processType)
