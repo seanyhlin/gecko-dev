@@ -29,7 +29,7 @@ PresentationParent::PresentationParent()
 void
 PresentationParent::ActorDestroy(ActorDestroyReason aWhy)
 {
-  mActorDestroyed = false;
+  mActorDestroyed = true;
   mService->UnregisterListener(this);
   mService = nullptr;
 }
@@ -41,37 +41,43 @@ PresentationParent::RecvPPresentationRequestConstructor(
 {
   PresentationRequestParent* actor = static_cast<PresentationRequestParent*>(aActor);
 
+  nsresult rv = NS_ERROR_FAILURE;
   switch (aRequest.type()) {
     case PresentationRequest::TStartSessionRequest:
-      return actor->DoRequest(aRequest.get_StartSessionRequest());
+      rv = actor->DoRequest(aRequest.get_StartSessionRequest());
+      break;
     case PresentationRequest::TJoinSessionRequest:
-      return actor->DoRequest(aRequest.get_JoinSessionRequest());
+      rv = actor->DoRequest(aRequest.get_JoinSessionRequest());
+      break;
     case PresentationRequest::TSendMessageRequest:
-      return actor->DoRequest(aRequest.get_SendMessageRequest());
+      rv = actor->DoRequest(aRequest.get_SendMessageRequest());
+      break;
     case PresentationRequest::TCloseSessionRequest:
-      return actor->DoRequest(aRequest.get_CloseSessionRequest());
+      rv = actor->DoRequest(aRequest.get_CloseSessionRequest());
+      break;
     default:
       MOZ_CRASH("Unknown PresentationRequest type");
       break;
   }
 
-  return false;
+  return NS_SUCCEEDED(rv);
 }
 
 PPresentationRequestParent*
 PresentationParent::AllocPPresentationRequestParent(
   const PresentationRequest& aRequest)
 {
-  PresentationRequestParent* actor = new PresentationRequestParent(mService);
-  NS_ADDREF(actor);
-  return actor;
+  MOZ_ASSERT(mService);
+  nsRefPtr<PresentationRequestParent> actor = new PresentationRequestParent(mService);
+  return actor.forget().take();
 }
 
 bool
 PresentationParent::DeallocPPresentationRequestParent(
   PPresentationRequestParent* aActor)
 {
-  static_cast<PresentationRequestParent*>(aActor)->Release();
+  PresentationRequestParent* actor = static_cast<PresentationRequestParent*>(aActor);
+  NS_RELEASE(actor);
   return true;
 }
 
@@ -182,40 +188,41 @@ PresentationRequestParent::ActorDestroy(ActorDestroyReason aWhy)
   mService = nullptr;
 }
 
-bool
+nsresult
 PresentationRequestParent::DoRequest(const StartSessionRequest& aRequest)
 {
   MOZ_ASSERT(mService);
-  nsresult rv = mService->StartSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin(), this);
-  return NS_SUCCEEDED(rv);
+  return mService->StartSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin(), this);
 }
 
-bool
+nsresult
 PresentationRequestParent::DoRequest(const JoinSessionRequest& aRequest)
 {
   MOZ_ASSERT(mService);
-  nsresult rv = mService->JoinSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin());
-  return NS_SUCCEEDED(rv);
+  return mService->JoinSessionInternal(aRequest.url(), aRequest.sessionId(), aRequest.origin());
 }
 
-bool
+nsresult
 PresentationRequestParent::DoRequest(const SendMessageRequest& aRequest)
 {
   MOZ_ASSERT(mService);
   nsTArray<mozilla::ipc::FileDescriptor> fds;
   nsCOMPtr<nsIInputStream> stream = DeserializeInputStream(aRequest.data(), fds);
   NS_WARN_IF(!stream);
-
-  nsresult rv = mService->SendMessageInternal(aRequest.sessionId(), stream);
-  return NS_SUCCEEDED(rv);
+  if (NS_FAILED(mService->SendMessageInternal(aRequest.sessionId(), stream))) {
+    return NotifyError(NS_LITERAL_STRING("SendMessageFailed"));
+  }
+  return NotifySuccess();
 }
 
-bool
+nsresult
 PresentationRequestParent::DoRequest(const CloseSessionRequest& aRequest)
 {
   MOZ_ASSERT(mService);
-  nsresult rv = mService->CloseSessionInternal(aRequest.sessionId());
-  return NS_SUCCEEDED(rv);
+  if (NS_FAILED(mService->CloseSessionInternal(aRequest.sessionId()))) {
+    return NotifyError(NS_LITERAL_STRING("CloseSessionFailed"));
+  }
+  return NotifySuccess();
 }
 
 NS_IMETHODIMP
@@ -233,9 +240,9 @@ PresentationRequestParent::NotifyError(const nsAString& aError)
 nsresult
 PresentationRequestParent::SendResponse(const PresentationResponse& aResponse)
 {
-  if (mActorDestroyed) {
+  if (mActorDestroyed || !Send__delete__(this, aResponse)) {
     return NS_ERROR_FAILURE;
   }
 
-  return Send__delete__(this, aResponse) ? NS_OK : NS_ERROR_FAILURE;
+  return NS_OK;
 }

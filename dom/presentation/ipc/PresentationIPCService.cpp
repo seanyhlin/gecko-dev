@@ -7,23 +7,28 @@
 #include "nsTArray.h"
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/ipc/InputStreamUtils.h"
-#include "mozilla/StaticPtr.h"
 #include "nsIPresentationRequestCallback.h"
 #include "PresentationChild.h"
 #include "PresentationIPCService.h"
 
+using namespace mozilla;
 using namespace mozilla::dom;
 using namespace mozilla::dom::presentation;
 
 namespace {
 
 PresentationChild* sPresentationChild;
+static bool sIsActorDead = false;
 
 } // anonymous
 
 /* static */ already_AddRefed<PresentationIPCService>
 PresentationIPCService::Create()
 {
+  if (sIsActorDead) {
+    return nullptr;
+  }
+
   ContentChild* contentChild = ContentChild::GetSingleton();
   if (NS_WARN_IF(!contentChild)) {
     return nullptr;
@@ -35,9 +40,11 @@ PresentationIPCService::Create()
   return service.forget();
 }
 
+/* virtual */
 PresentationIPCService::~PresentationIPCService()
 {
   mSessionListeners.Clear();
+  sPresentationChild = nullptr;
 }
 
 /* virtual */ nsresult
@@ -102,7 +109,9 @@ PresentationIPCService::RegisterListener(nsIPresentationListener* aListener)
 {
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.AppendElement(aListener);
-  NS_WARN_IF(!sPresentationChild->SendRegisterHandler());
+  if (sPresentationChild) {
+    NS_WARN_IF(!sPresentationChild->SendRegisterHandler());
+  }
 }
 
 /* virtual */ void
@@ -110,7 +119,9 @@ PresentationIPCService::UnregisterListener(nsIPresentationListener* aListener)
 {
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.RemoveElement(aListener);
-  NS_WARN_IF(!sPresentationChild->SendUnregisterHandler());
+  if (sPresentationChild) {
+    NS_WARN_IF(!sPresentationChild->SendUnregisterHandler());
+  }
 }
 
 /* virtual */ void
@@ -119,7 +130,9 @@ PresentationIPCService::RegisterSessionListener(const nsAString& aSessionId,
 {
   MOZ_ASSERT(NS_IsMainThread());
   mSessionListeners.Put(aSessionId, aListener);
-  NS_WARN_IF(!sPresentationChild->SendRegisterSessionHandler(nsString(aSessionId)));
+  if (sPresentationChild) {
+    NS_WARN_IF(!sPresentationChild->SendRegisterSessionHandler(nsString(aSessionId)));
+  }
 }
 
 /* virtual */ void
@@ -128,8 +141,8 @@ PresentationIPCService::UnregisterSessionListener(const nsAString& aSessionId,
 {
   MOZ_ASSERT(NS_IsMainThread());
 
-  if (mSessionListeners.GetWeak(aSessionId, nullptr)) {
-    mSessionListeners.Remove(aSessionId);
+  mSessionListeners.Remove(aSessionId);
+  if (sPresentationChild) {
     NS_WARN_IF(!sPresentationChild->SendUnregisterSessionHandler(nsString(aSessionId)));
   }
 }
@@ -161,4 +174,11 @@ PresentationIPCService::NotifyMessage(const nsAString& aSessionId,
   }
 
   return listener->NotifyMessage(aSessionId, aData);
+}
+
+void
+PresentationIPCService::NotifyDeadActor()
+{
+  sIsActorDead = true;
+  sPresentationChild = nullptr;
 }

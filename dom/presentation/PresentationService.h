@@ -163,7 +163,10 @@ private:
   FindAppOnDevice(const nsAString& aUrl);
 
   nsresult
-  ReplyRequestWithError(const nsAString& aId, const nsAString& aError);
+  ReplyCallbackWithError(SessionInfo* aInfo, const nsAString& aError);
+
+  nsresult
+  ReplyCallback(SessionInfo* aInfo);
 
   bool mAvailable;
   bool mPendingSessionReady;

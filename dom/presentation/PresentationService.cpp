@@ -91,10 +91,7 @@ PresentationService::PresentationDeviceRequest::Select(nsIPresentationDevice* aD
   nsCOMPtr<nsIPresentationControlChannel> ctrlChannel;
   if (NS_FAILED(aDevice->EstablishControlChannel(mRequestUrl, mId,
                                                  getter_AddRefs(ctrlChannel)))) {
-    nsresult rv = sPresentationService->ReplyRequestWithError(mId,NS_LITERAL_STRING("NoControlChannel"));
-    if(NS_WARN_IF(NS_FAILED(rv))) {
-      return rv;
-    }
+    NS_WARN_IF(NS_FAILED(sPresentationService->ReplyCallbackWithError(info, NS_LITERAL_STRING("NoControlChannel"))));
     sPresentationService->mSessionInfo.Remove(mId);
     return NS_OK;
   }
@@ -109,10 +106,12 @@ NS_IMETHODIMP
 PresentationService::PresentationDeviceRequest::Cancel()
 {
   LOG("[Service] %s", __FUNCTION__);
-  nsresult rv = sPresentationService->ReplyRequestWithError(mId, NS_LITERAL_STRING("UserCanceled"));
-  if(NS_WARN_IF(NS_FAILED(rv))) {
-    return rv;
+  SessionInfo* info;
+  if (!sPresentationService->mSessionInfo.Get(mId, &info)) {
+    return NS_OK;
   }
+
+  NS_WARN_IF(NS_FAILED(sPresentationService->ReplyCallbackWithError(info, NS_LITERAL_STRING("UserCanceled"))));
   sPresentationService->mSessionInfo.Remove(mId);
   return NS_OK;
 }
@@ -133,10 +132,10 @@ PresentationService::Get()
   nsRefPtr<PresentationService> service;
   if (!sPresentationService) {
     service = PresentationService::Create();
-    sPresentationService = service;
-    if (NS_WARN_IF(!sPresentationService)) {
+    if (!service) {
       return nullptr;
     }
+    sPresentationService = service;
     ClearOnShutdown(&sPresentationService);
   } else {
     service = sPresentationService.get();
@@ -153,8 +152,14 @@ PresentationService::Create()
     service = PresentationIPCService::Create();
   } else {
     service = new PresentationService();
+    if (NS_WARN_IF(!service->Init())) {
+      return nullptr;
+    }
   }
 
+  if (!service) {
+    return nullptr;
+  }
   return service.forget();
 }
 
@@ -163,13 +168,10 @@ PresentationService::PresentationService()
   , mPendingSessionReady(false)
   , mSessionInfo(128)
 {
-  NS_WARN_IF(!Init());
 }
 
 /* virtual */ PresentationService::~PresentationService()
 {
-  mListeners.Clear();
-  mSessionInfo.Clear();
 }
 
 bool
@@ -237,7 +239,6 @@ PresentationService::NotifySessionReady(const nsAString& aId)
 {
   LOG("[Service] %s", __FUNCTION__);
   if (!mListeners.Length()) {
-    LOG("[Service] No listenr is registered.")
     mPendingSessionReady = true;
     mPendingSessionId = aId;
     return;
@@ -253,6 +254,7 @@ PresentationService::NotifySessionReady(const nsAString& aId)
 nsresult
 PresentationService::HandleDeviceChange()
 {
+  LOG("[Service] %s", __FUNCTION__);
   nsCOMPtr<nsIPresentationDeviceManager> deviceManager =
     do_GetService(PRESENTATION_DEVICE_MANAGER_CONTRACTID);
   if (NS_WARN_IF(!deviceManager)) {
@@ -276,7 +278,6 @@ nsresult
 PresentationService::HandleSessionRequest(nsISupports* aSubject)
 {
   LOG("[Service] %s", __FUNCTION__);
-
   // Receives a session request on receiver side.
   nsCOMPtr<nsIPresentationSessionRequest> request(do_QueryInterface(aSubject));
   if (NS_WARN_IF(!request)) {
@@ -362,22 +363,32 @@ PresentationService::FindAppOnDevice(const nsAString& aUrl)
 }
 
 nsresult
-PresentationService::ReplyRequestWithError(const nsAString& aId,
-                                           const nsAString& aError)
+PresentationService::ReplyCallbackWithError(SessionInfo* aInfo,
+                                            const nsAString& aError)
 {
-  LOG("ReplyRequestWithError");
-  SessionInfo* info = mSessionInfo.Get(aId);
-  if (NS_WARN_IF(!info)) {
-    return NS_ERROR_NOT_AVAILABLE;
+  NS_ENSURE_ARG(aInfo);
+
+  nsresult rv = NS_ERROR_FAILURE;
+  if (aInfo->callback) {
+    rv = aInfo->callback->NotifyError(aError);
+    aInfo->callback = nullptr;
   }
 
-  if (NS_WARN_IF(!info->callback) ||
-      NS_WARN_IF(NS_FAILED(info->callback->NotifyError(aError)))) {
-    return NS_ERROR_FAILURE;
+  return rv;
+}
+
+nsresult
+PresentationService::ReplyCallback(SessionInfo* aInfo)
+{
+  NS_ENSURE_ARG(aInfo);
+
+  nsresult rv = NS_ERROR_FAILURE;
+  if (aInfo->callback) {
+    rv = aInfo->callback->NotifySuccess();
+    aInfo->callback = nullptr;
   }
 
-  info->callback = nullptr;
-  return NS_OK;
+  return rv;
 }
 
 /* virtual */ nsresult
@@ -390,14 +401,6 @@ PresentationService::StartSessionInternal(const nsAString& aUrl,
   MOZ_ASSERT(aCallback);
   LOG("[Service] %s", __FUNCTION__);
 
-  nsCOMPtr<nsIPresentationDeviceManager> deviceManager =
-    do_GetService(PRESENTATION_DEVICE_MANAGER_CONTRACTID);
-  if (deviceManager) {
-    bool available;
-    deviceManager->GetDeviceAvailable(&available);
-    LOG("available: %d, mAvailable: %d", available, mAvailable);
-  }
- 
   if (!mAvailable) {
     aCallback->NotifyError(NS_LITERAL_STRING("NoAvailableDevice"));
     return NS_OK;
@@ -441,6 +444,7 @@ PresentationService::JoinSessionInternal(const nsAString& aUrl,
 PresentationService::SendMessageInternal(const nsAString& aSessionId,
                                          nsIInputStream* aStream)
 {
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   if (aSessionId.IsEmpty()) {
@@ -462,6 +466,7 @@ PresentationService::SendMessageInternal(const nsAString& aSessionId,
 PresentationService::CloseSessionInternal(const nsAString& aSessionId)
 {
   MOZ_ASSERT(NS_IsMainThread());
+  LOG("[Service] %s", __FUNCTION__);
 
   if (aSessionId.IsEmpty()) {
     return NS_ERROR_INVALID_ARG;
@@ -500,6 +505,7 @@ PresentationService::UnregisterListener(nsIPresentationListener* aListener)
 PresentationService::RegisterSessionListener(const nsAString& aSessionId,
                                              nsIPresentationSessionListener* aListener)
 {
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   NS_WARN_IF(!aListener);
 
@@ -525,6 +531,7 @@ PresentationService::RegisterSessionListener(const nsAString& aSessionId,
 PresentationService::UnregisterSessionListener(const nsAString& aSessionId,
                                                nsIPresentationSessionListener* aListener)
 {
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   SessionInfo* info = mSessionInfo.Get(aSessionId);
@@ -540,12 +547,10 @@ PresentationService::OnSessionComplete(Session* aSession)
 {
   LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
-  NS_ENSURE_ARG_POINTER(aSession);
+  NS_ENSURE_ARG(aSession);
 
   SessionInfo* info = mSessionInfo.Get(aSession->Id());
-  if (NS_WARN_IF(!info)) {
-    return NS_ERROR_NOT_AVAILABLE;
-  }
+  NS_ENSURE_ARG(info);
 
   info->isSessionComplete = true;
 
@@ -560,7 +565,7 @@ PresentationService::OnSessionComplete(Session* aSession)
   }
 
   if (info->callback) {
-    return info->callback->NotifySuccess();
+    NS_WARN_IF(NS_FAILED(ReplyCallback(info)));
   }
 
   return NS_OK;
@@ -571,7 +576,7 @@ PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
 {
   LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
-  NS_ENSURE_ARG_POINTER(aSession);
+  NS_ENSURE_ARG(aSession);
 
   SessionInfo* info = mSessionInfo.Get(aSession->Id());
   if (NS_WARN_IF(!info)) {
@@ -590,26 +595,26 @@ PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
     info->listener = nullptr;
   }
 
-  // Responder.
   if (!info->isRequester) {
+    // Responder.
     info->session = nullptr;
     info->device = nullptr;
-    return NS_OK;
-  }
-
-  // Requester - remove the session since it hasn't been successfully set up.
-  if (info->callback) {
-    nsresult rv = ReplyRequestWithError(aSession->Id(), NS_LITERAL_STRING("FailedToEstablishSession"));
-    if(NS_WARN_IF(NS_FAILED(rv))) {
-      return rv;
+  } else {
+    // Requester - remove the session since it hasn't been successfully set up.
+    if (info->callback && NS_FAILED(aReason)) {
+      NS_WARN_IF(NS_FAILED(ReplyCallbackWithError(info,
+                                                  NS_LITERAL_STRING("EstablishSessionFailed"))));
     }
-    info->callback = nullptr;
-    mSessionInfo.Remove(aSession->Id());
-    return NS_OK;
   }
 
-  // Reqeuster - remove the session once it gets closed successfully.
+  // remove the session once it gets closed successfully.
   if (NS_SUCCEEDED(aReason)) {
+    if (info->device) {
+      info->device = nullptr;
+    }
+    if (info->session) {
+      info->session = nullptr;
+    }
     mSessionInfo.Remove(aSession->Id());
   }
 
@@ -620,12 +625,11 @@ nsresult
 PresentationService::OnSessionMessage(Session* aSession, const nsACString& aMessage)
 {
   LOG("[Service] %s", __FUNCTION__);
-  NS_ENSURE_ARG_POINTER(aSession);
+  NS_ENSURE_ARG(aSession);
 
   SessionInfo* info = mSessionInfo.Get(aSession->Id());
   NS_ENSURE_TRUE(info, NS_ERROR_NOT_AVAILABLE);
   NS_ENSURE_TRUE(info->listener, NS_ERROR_NOT_AVAILABLE);
 
-  LOG("[Service] going to notify message");
   return info->listener->NotifyMessage(aSession->Id(), aMessage);
 }

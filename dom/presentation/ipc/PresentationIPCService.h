@@ -64,9 +64,12 @@ public:
   NotifyMessage(const nsAString& aSessionId,
                 const nsACString& aData);
 
+  void
+  NotifyDeadActor();
+
 private:
   PresentationIPCService() { }
-  ~PresentationIPCService();
+  virtual ~PresentationIPCService();
 
   nsresult
   SendRequest(nsIPresentationRequestCallback* aCallback,

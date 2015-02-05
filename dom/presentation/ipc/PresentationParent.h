@@ -86,16 +86,16 @@ protected:
 private:
   friend class PresentationParent;
 
-  bool
+  nsresult
   DoRequest(const StartSessionRequest& aRequest);
 
-  bool
+  nsresult
   DoRequest(const JoinSessionRequest& aRequest);
 
-  bool
+  nsresult
   DoRequest(const SendMessageRequest& aRequest);
 
-  bool
+  nsresult
   DoRequest(const CloseSessionRequest& aRequest);
 
   bool mActorDestroyed;

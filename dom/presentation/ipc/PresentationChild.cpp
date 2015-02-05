@@ -13,17 +13,11 @@ using namespace mozilla;
 using namespace mozilla::dom;
 using namespace mozilla::dom::presentation;
 
-namespace {
-
-StaticRefPtr<PresentationIPCService> sPresentationService;
-
-} // namespace anonymous
-
 PresentationChild::PresentationChild(PresentationIPCService* aService)
   : mActorDestroyed(false)
+  , mService(aService)
 {
   MOZ_COUNT_CTOR(PresentationChild);
-  sPresentationService = aService;
 }
 
 PresentationChild::~PresentationChild()
@@ -33,13 +27,15 @@ PresentationChild::~PresentationChild()
   if (!mActorDestroyed) {
     Send__delete__(this);
   }
-  sPresentationService = nullptr;
+  mService = nullptr;
 }
 
 void
 PresentationChild::ActorDestroy(ActorDestroyReason aWhy)
 {
   mActorDestroyed = true;
+  mService->NotifyDeadActor();
+  mService = nullptr;
 }
 
 PPresentationRequestChild*
@@ -59,8 +55,8 @@ PresentationChild::DeallocPPresentationRequestChild(PPresentationRequestChild* a
 bool
 PresentationChild::RecvNotifyAvailableChange(const bool& aAvailable)
 {
-  MOZ_ASSERT(sPresentationService);
-  sPresentationService->NotifyAvailableListeners(aAvailable);
+  MOZ_ASSERT(mService);
+  mService->NotifyAvailableListeners(aAvailable);
 
   return true;
 }
@@ -68,8 +64,8 @@ PresentationChild::RecvNotifyAvailableChange(const bool& aAvailable)
 bool
 PresentationChild::RecvNotifySessionReady(const nsString& aId)
 {
-  MOZ_ASSERT(sPresentationService);
-  sPresentationService->NotifySessionReady(nsString(aId));
+  MOZ_ASSERT(mService);
+  mService->NotifySessionReady(nsString(aId));
 
   return true;
 }
@@ -79,9 +75,9 @@ PresentationChild::RecvNotifySessionStateChange(const nsString& aSessionId,
                                                 const uint16_t& aState,
                                                 const nsresult& aReason)
 {
-  MOZ_ASSERT(sPresentationService);
-  if (sPresentationService) {
-    sPresentationService->NotifySessionStateChange(aSessionId, aState, aReason);
+  MOZ_ASSERT(mService);
+  if (mService) {
+    mService->NotifySessionStateChange(aSessionId, aState, aReason);
   }
 
   return true;
@@ -91,9 +87,9 @@ bool
 PresentationChild::RecvNotifyMessage(const nsString& aSessionId,
                                      const nsCString& aData)
 {
-  MOZ_ASSERT(sPresentationService);
-  if (sPresentationService) {
-    sPresentationService->NotifyMessage(aSessionId, aData);
+  MOZ_ASSERT(mService);
+  if (mService) {
+    mService->NotifyMessage(aSessionId, aData);
   }
 
   return true;
@@ -108,11 +104,13 @@ PresentationRequestChild::PresentationRequestChild(nsIPresentationRequestCallbac
 
 PresentationRequestChild::~PresentationRequestChild()
 {
+  mCallback = nullptr;
 }
 
 void
 PresentationRequestChild::ActorDestroy(ActorDestroyReason aWhy)
 {
+  mCallback = nullptr;
 }
 
 bool

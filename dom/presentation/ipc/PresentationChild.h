@@ -49,6 +49,7 @@ public:
 
 private:
   bool mActorDestroyed;
+  nsRefPtr<PresentationIPCService> mService;
 };
 
 class PresentationRequestChild : public PPresentationRequestChild
