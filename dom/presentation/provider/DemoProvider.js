@@ -509,7 +509,14 @@ var devices = {};
 
 function DemoDeviceProvider() {
   log("create DemoDeviceProvider");
-  Services.obs.addObserver(this, "network-active-changed", false);
+
+  // Only B2G has nsINetworkManager
+  if (Ci.nsINetworkManager) {
+    Services.obs.addObserver(this, "network-active-changed", false);
+  } else {
+    Services.obs.addObserver(this, "network:link-status-changed", false);
+  }
+
   Services.prefs.addObserver("dom.presentation.demo.devices", this, false);
 }
 
@@ -567,11 +574,23 @@ DemoDeviceProvider.prototype = {
         this._networkChanged(subject, topic, data);
         break;
       }
+      case "network:link-status-changed": {
+        this._linkStatusChanged(subject, topic, data);
+        break;
+      }
     }
   },
+
   _prefChanged: function(subject, topic, data) {
     this.forceDiscovery();
   },
+
+  _linkStatusChanged: function(subject, topic, data) {
+    // restart TCP server socket
+    presentationServer.deinit();
+    presentationServer.init();
+  },
+
   _networkChanged: function(subject, topic, data) {
     if (!subject) {
       log("No active network");
