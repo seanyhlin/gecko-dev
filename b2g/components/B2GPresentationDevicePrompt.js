@@ -48,7 +48,7 @@ B2GPresentationDevicePrompt.prototype = {
           if (!device) {
             debug("cancel request because device is not found");
             aRequest.cancel();
-						break;
+            break;
           }
           aRequest.select(device);
           break;

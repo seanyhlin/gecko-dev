@@ -341,26 +341,6 @@ union OptionalContentId
   void_t;
 };
 
-struct PresentationStartSessionParams
-{
-  nsString url;
-  nsString sessionId;
-  nsString origin;
-};
-
-struct PresentationJoinSessionParams
-{
-  nsString url;
-  nsString sessionId;
-  nsString origin;
-};
-
-union PresentationParams
-{
-  PresentationStartSessionParams;
-  PresentationJoinSessionParams;
-};
-
 prio(normal upto urgent) intr protocol PContent
 {
     parent spawns PPluginModule;
