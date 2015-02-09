@@ -26,7 +26,6 @@
 #include "mozilla/dom/presentation/PresentationIPCService.h"
 #include "mozilla/unused.h"
 
-#include "FakePresentationDevice.h"
 #if defined(MOZ_WIDGET_GONK)
 #include <android/log.h>
 #define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
