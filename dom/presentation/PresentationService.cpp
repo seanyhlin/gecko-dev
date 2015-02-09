@@ -132,7 +132,7 @@ PresentationService::Get()
   nsRefPtr<PresentationService> service;
   if (!sPresentationService) {
     service = PresentationService::Create();
-    if (!service) {
+    if (NS_WARN_IF(!service)) {
       return nullptr;
     }
     sPresentationService = service;
@@ -303,7 +303,7 @@ PresentationService::HandleSessionRequest(nsISupports* aSubject)
   request->GetUrl(url);
   if (url.Find("app://") == 0) {
     int32_t offset = url.RFindChar('/');
-    if (offset == kNotFound) {
+    if (NS_WARN_IF(offset == kNotFound)) {
       ctrlChannel->Close(NS_ERROR_UNEXPECTED);
       return NS_OK;
     }
@@ -346,10 +346,11 @@ PresentationService::Observe(nsISupports* aSubject,
 bool
 PresentationService::FindAppOnDevice(const nsAString& aUrl)
 {
+  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   nsCOMPtr<nsIAppsService> appService = do_GetService("@mozilla.org/AppsService;1");
-  if (!appService) {
+  if (NS_WARN_IF(!appService)) {
     return false;
   }
 
@@ -578,7 +579,8 @@ PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
   MOZ_ASSERT(NS_IsMainThread());
   NS_ENSURE_ARG(aSession);
 
-  SessionInfo* info = mSessionInfo.Get(aSession->Id());
+  nsString sessionId(aSession->Id());
+  SessionInfo* info = mSessionInfo.Get(sessionId);
   if (NS_WARN_IF(!info)) {
     return NS_ERROR_NOT_AVAILABLE;
   }
@@ -587,7 +589,7 @@ PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
   nsCOMPtr<nsIPresentationSessionListener> listener = info->listener;
   NS_WARN_IF(!listener);
   if (listener) {
-    nsresult rv = listener->NotifyStateChange(aSession->Id(),
+    nsresult rv = listener->NotifyStateChange(sessionId,
                                               nsIPresentationSessionListener::STATE_DISCONNECTED,
                                               aReason);
     NS_ENSURE_SUCCESS(rv, rv);
