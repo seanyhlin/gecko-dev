@@ -34,6 +34,7 @@ include protocol PSharedBufferManager;
 include protocol PSms;
 include protocol PSpeechSynthesis;
 include protocol PStorage;
+include protocol PPresentation;
 include protocol PTelephony;
 include protocol PTestShell;
 include protocol PVoicemail;
@@ -374,6 +375,7 @@ prio(normal upto urgent) sync protocol PContent
     manages PSms;
     manages PSpeechSynthesis;
     manages PStorage;
+    manages PPresentation;
     manages PTelephony;
     manages PTestShell;
     manages PVoicemail;
@@ -655,6 +657,8 @@ parent:
     PSpeechSynthesis();
 
     PStorage();
+
+    PPresentation();
 
     PTelephony();
 

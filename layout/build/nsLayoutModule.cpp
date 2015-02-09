@@ -117,6 +117,14 @@ using mozilla::dom::bluetooth::BluetoothService;
   "@mozilla.org/bluetooth/service;1"
 #endif
 
+#include "mozilla/dom/presentation/PresentationService.h"
+using mozilla::dom::presentation::PresentationService;
+#define PRESENTATIONSERVICE_CID \
+{ 0xf943d779, 0xff54, 0x47c7, \
+  { 0xb6, 0x90, 0xcc, 0x15, 0x04, 0x96, 0x0c, 0x01 } }
+#define PRESENTATIONSERVICE_CONTRACTID \
+  "@mozilla.org/presentation/service;1"
+
 #ifdef MOZ_WIDGET_GONK
 #include "AudioManager.h"
 using mozilla::dom::gonk::AudioManager;
@@ -379,6 +387,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(TVChannelData)
 NS_GENERIC_FACTORY_CONSTRUCTOR(TVProgramData)
 NS_GENERIC_FACTORY_CONSTRUCTOR(PresentationDeviceManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(TextInputProcessor)
+NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(PresentationService, PresentationService::Get)
 
 //-----------------------------------------------------------------------------
 
@@ -822,6 +831,8 @@ NS_DEFINE_NAMED_CID(GECKO_MEDIA_PLUGIN_SERVICE_CID);
 
 NS_DEFINE_NAMED_CID(NS_MOBILE_CONNECTION_SERVICE_CID);
 
+NS_DEFINE_NAMED_CID(PRESENTATIONSERVICE_CID);
+
 NS_DEFINE_NAMED_CID(PRESENTATION_DEVICE_MANAGER_CID);
 
 NS_DEFINE_NAMED_CID(TEXT_INPUT_PROCESSOR_CID);
@@ -1113,6 +1124,7 @@ static const mozilla::Module::CIDEntry kLayoutCIDs[] = {
   { &kTV_TUNER_DATA_CID, false, nullptr, TVTunerDataConstructor },
   { &kTV_CHANNEL_DATA_CID, false, nullptr, TVChannelDataConstructor },
   { &kTV_PROGRAM_DATA_CID, false, nullptr, TVProgramDataConstructor },
+  { &kPRESENTATIONSERVICE_CID, false, nullptr, PresentationServiceConstructor },
   { &kPRESENTATION_DEVICE_MANAGER_CID, false, nullptr, PresentationDeviceManagerConstructor },
   { &kTEXT_INPUT_PROCESSOR_CID, false, nullptr, TextInputProcessorConstructor },
   { nullptr }
@@ -1273,6 +1285,7 @@ static const mozilla::Module::ContractIDEntry kLayoutContracts[] = {
   { "@mozilla.org/gecko-media-plugin-service;1",  &kGECKO_MEDIA_PLUGIN_SERVICE_CID },
   { NS_MOBILE_CONNECTION_SERVICE_CONTRACTID, &kNS_MOBILE_CONNECTION_SERVICE_CID },
   { NS_VOICEMAIL_SERVICE_CONTRACTID, &kNS_VOICEMAIL_SERVICE_CID },
+  { PRESENTATIONSERVICE_CONTRACTID, &kPRESENTATIONSERVICE_CID },
   { PRESENTATION_DEVICE_MANAGER_CONTRACTID, &kPRESENTATION_DEVICE_MANAGER_CID },
   { "@mozilla.org/text-input-processor;1", &kTEXT_INPUT_PROCESSOR_CID },
   { nullptr }
@@ -1298,6 +1311,7 @@ static const mozilla::Module::CategoryEntry kLayoutCategories[] = {
 #ifdef MOZ_B2G_BT
   { "profile-after-change", "Bluetooth Service", BLUETOOTHSERVICE_CONTRACTID },
 #endif
+  { "profile-after-change", "PresentationService", PRESENTATIONSERVICE_CONTRACTID },
   { "profile-after-change", "PresentationDeviceManager", PRESENTATION_DEVICE_MANAGER_CONTRACTID },
   { nullptr }
 };

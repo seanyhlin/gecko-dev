@@ -4,18 +4,34 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-DIRS += ['interfaces']
+DIRS += ['interfaces', 'provider']
 
 XPCSHELL_TESTS_MANIFESTS += ['tests/xpcshell/xpcshell.ini']
 MOCHITEST_MANIFESTS += ['tests/mochitest/mochitest.ini']
 
 EXPORTS.mozilla.dom.presentation += [
+    'ipc/PresentationChild.h',
+    'ipc/PresentationIPCService.h',
+    'ipc/PresentationParent.h',
+    'Presentation.h',
     'PresentationDeviceManager.h',
+    'PresentationService.h',
+    'PresentationSession.h',
+    'PresentationSessionTransport.h',
+    'Session.h'
 ]
 
 SOURCES += [
+    'ipc/PresentationChild.cpp',
+    'ipc/PresentationIPCService.cpp',
+    'ipc/PresentationParent.cpp',
+    'Presentation.cpp',
     'PresentationDeviceManager.cpp',
+    'PresentationService.cpp',
+    'PresentationSession.cpp',
     'PresentationSessionRequest.cpp',
+    'PresentationSessionTransport.cpp',
+    'Session.cpp'
 ]
 
 EXTRA_COMPONENTS += [
@@ -25,6 +41,11 @@ EXTRA_COMPONENTS += [
 
 EXTRA_JS_MODULES += [
     'PresentationDeviceInfoManager.jsm',
+]
+
+IPDL_SOURCES += [
+    'ipc/PPresentation.ipdl',
+    'ipc/PPresentationRequest.ipdl'
 ]
 
 FAIL_ON_WARNINGS = True

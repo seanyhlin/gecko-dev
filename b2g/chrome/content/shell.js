@@ -670,6 +670,15 @@ Services.obs.addObserver(function(subject, topic, data) {
   shell.sendCustomEvent('mozmemorypressure');
 }, 'memory-pressure', false);
 
+Services.obs.addObserver(function(subject, topic, data) {
+  let request = subject.QueryInterface(Ci.nsIPresentationSessionRequest);
+  shell.sendChromeEvent({
+    type: "presentation-launch-receiver",
+    url: request.url,
+    id: request.presentationId
+  });
+}, 'presentation-launch-receiver', false);
+
 var CustomEventManager = {
   init: function custevt_init() {
     window.addEventListener("ContentStart", (function(evt) {
@@ -705,6 +714,9 @@ var CustomEventManager = {
         break;
       case 'do-command':
         DoCommandHelper.handleEvent(detail.cmd);
+        break;
+      case 'presentation-receiver-launched':
+        Services.obs.notifyObservers(detail.frame, 'presentation-receiver-launched', detail.id);
         break;
     }
   }

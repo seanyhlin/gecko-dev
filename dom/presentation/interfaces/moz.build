@@ -10,7 +10,9 @@ XPIDL_SOURCES += [
     'nsIPresentationDeviceManager.idl',
     'nsIPresentationDevicePrompt.idl',
     'nsIPresentationDeviceProvider.idl',
+    'nsIPresentationRequestCallback.idl',
     'nsIPresentationSessionRequest.idl',
+    'nsIPresentationSessionTransport.idl'
 ]
 
 XPIDL_MODULE = 'dom_presentation'

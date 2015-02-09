@@ -47,6 +47,9 @@
 #include "mozilla/dom/PCycleCollectWithLogsParent.h"
 #include "mozilla/dom/PFMRadioParent.h"
 #include "mozilla/dom/PMemoryReportRequestParent.h"
+#include "mozilla/dom/presentation/PresentationParent.h"
+#include "mozilla/dom/presentation/PresentationService.h"
+#include "mozilla/dom/presentation/PPresentationParent.h"
 #include "mozilla/dom/asmjscache/AsmJSCache.h"
 #include "mozilla/dom/bluetooth/PBluetoothParent.h"
 #include "mozilla/dom/cellbroadcast/CellBroadcastParent.h"
@@ -225,6 +228,7 @@ using namespace mozilla::dom::cellbroadcast;
 using namespace mozilla::dom::devicestorage;
 using namespace mozilla::dom::indexedDB;
 using namespace mozilla::dom::power;
+using namespace mozilla::dom::presentation;
 using namespace mozilla::dom::mobileconnection;
 using namespace mozilla::dom::mobilemessage;
 using namespace mozilla::dom::telephony;
@@ -3693,6 +3697,31 @@ ContentParent::DeallocPFMRadioParent(PFMRadioParent* aActor)
     NS_WARNING("No support for FMRadio on this platform!");
     return false;
 #endif
+}
+
+PPresentationParent*
+ContentParent::AllocPPresentationParent()
+{
+    nsRefPtr<PresentationParent> actor = new PresentationParent();
+    return actor.forget().take();
+}
+
+bool
+ContentParent::DeallocPPresentationParent(PPresentationParent* aActor)
+{
+    nsRefPtr<PresentationParent> actor =
+      dont_AddRef(static_cast<PresentationParent*>(aActor));
+    return true;
+}
+
+bool
+ContentParent::RecvPPresentationConstructor(PPresentationParent* aActor)
+{
+    nsRefPtr<PresentationService> service = PresentationService::Get();
+    if (NS_WARN_IF(!service)) {
+      return false;
+    }
+    return static_cast<PresentationParent*>(aActor)->Init(service);
 }
 
 asmjscache::PAsmJSCacheEntryParent*

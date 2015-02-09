@@ -1,0 +1,3 @@
+component {ab6e00ed-42c3-47ea-98d5-2fc19f8862ec} DemoProvider.js
+contract @mozilla.org/presentation-device/demo-provider;1 {ab6e00ed-42c3-47ea-98d5-2fc19f8862ec}
+category presentation-device-provider DemoProvider @mozilla.org/presentation-device/demo-provider;1
