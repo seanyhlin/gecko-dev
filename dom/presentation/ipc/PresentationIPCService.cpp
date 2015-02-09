@@ -15,6 +15,13 @@ using namespace mozilla;
 using namespace mozilla::dom;
 using namespace mozilla::dom::presentation;
 
+#if defined(MOZ_WIDGET_GONK)
+#include <android/log.h>
+#define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
+#else
+#define LOG(args...)  printf(args);
+#endif
+
 namespace {
 
 PresentationChild* sPresentationChild;
@@ -25,10 +32,13 @@ static bool sIsActorDead = false;
 /* static */ already_AddRefed<PresentationIPCService>
 PresentationIPCService::Create()
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   if (sIsActorDead) {
-    return nullptr;
+    LOG("[IPCService] actor is dead");
+    return nullptr;  
   }
 
+  LOG("[IPCService] %s", __FUNCTION__);
   ContentChild* contentChild = ContentChild::GetSingleton();
   if (NS_WARN_IF(!contentChild)) {
     return nullptr;
@@ -43,6 +53,7 @@ PresentationIPCService::Create()
 /* virtual */
 PresentationIPCService::~PresentationIPCService()
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   mSessionListeners.Clear();
   sPresentationChild = nullptr;
 }
@@ -53,6 +64,7 @@ PresentationIPCService::StartSessionInternal(const nsAString& aUrl,
                                              const nsAString& aOrigin,
                                              nsIPresentationRequestCallback* aCallback)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   return SendRequest(aCallback,
                      StartSessionRequest(nsString(aUrl), nsString(aSessionId), nsString(aOrigin)));
 }
@@ -62,6 +74,7 @@ PresentationIPCService::JoinSessionInternal(const nsAString& aUrl,
                                             const nsAString& aSessionId,
                                             const nsAString& aOrigin)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   return NS_OK;
 }
 
@@ -69,6 +82,7 @@ PresentationIPCService::JoinSessionInternal(const nsAString& aUrl,
 PresentationIPCService::SendMessageInternal(const nsAString& aSessionId,
                                             nsIInputStream* aStream)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   if (aSessionId.IsEmpty()) {
     return NS_ERROR_INVALID_ARG;
   }
@@ -86,6 +100,7 @@ PresentationIPCService::SendMessageInternal(const nsAString& aSessionId,
 /* virtual */ nsresult
 PresentationIPCService::CloseSessionInternal(const nsAString& aSessionId)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   if (aSessionId.IsEmpty()) {
     return NS_ERROR_INVALID_ARG;
   }
@@ -97,6 +112,7 @@ nsresult
 PresentationIPCService::SendRequest(nsIPresentationRequestCallback* aCallback,
                                     const PresentationRequest& aRequest)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   if (sPresentationChild) {
     PresentationRequestChild* actor = new PresentationRequestChild(aCallback);
     sPresentationChild->SendPPresentationRequestConstructor(actor, aRequest);
@@ -107,6 +123,7 @@ PresentationIPCService::SendRequest(nsIPresentationRequestCallback* aCallback,
 /* virtual */ void
 PresentationIPCService::RegisterListener(nsIPresentationListener* aListener)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.AppendElement(aListener);
   if (sPresentationChild) {
@@ -117,6 +134,7 @@ PresentationIPCService::RegisterListener(nsIPresentationListener* aListener)
 /* virtual */ void
 PresentationIPCService::UnregisterListener(nsIPresentationListener* aListener)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.RemoveElement(aListener);
   if (sPresentationChild) {
@@ -128,6 +146,7 @@ PresentationIPCService::UnregisterListener(nsIPresentationListener* aListener)
 PresentationIPCService::RegisterSessionListener(const nsAString& aSessionId,
                                                 nsIPresentationSessionListener* aListener)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   mSessionListeners.Put(aSessionId, aListener);
   if (sPresentationChild) {
@@ -139,6 +158,7 @@ PresentationIPCService::RegisterSessionListener(const nsAString& aSessionId,
 PresentationIPCService::UnregisterSessionListener(const nsAString& aSessionId,
                                                   nsIPresentationSessionListener* aListener)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   mSessionListeners.Remove(aSessionId);
@@ -152,6 +172,7 @@ PresentationIPCService::NotifySessionStateChange(const nsAString& aSessionId,
                                                  uint16_t aState,
                                                  nsresult aReason)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   nsCOMPtr<nsIPresentationSessionListener> listener;
   if (NS_WARN_IF(!mSessionListeners.Get(aSessionId, getter_AddRefs(listener)))) {
     return NS_OK;
@@ -168,6 +189,7 @@ nsresult
 PresentationIPCService::NotifyMessage(const nsAString& aSessionId,
                                       const nsACString& aData)
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   nsCOMPtr<nsIPresentationSessionListener> listener;
   if (NS_WARN_IF(!mSessionListeners.Get(aSessionId, getter_AddRefs(listener)))) {
     return NS_OK;
@@ -179,6 +201,7 @@ PresentationIPCService::NotifyMessage(const nsAString& aSessionId,
 void
 PresentationIPCService::NotifyDeadActor()
 {
+  LOG("[IPCService] %s", __FUNCTION__);
   sIsActorDead = true;
   sPresentationChild = nullptr;
 }
