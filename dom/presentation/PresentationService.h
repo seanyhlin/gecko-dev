@@ -215,6 +215,9 @@ private:
   };
 
   nsClassHashtable<nsStringHashKey, SessionInfo> mSessionInfo;
+  //XXX hack for multiple session on receiver side
+  nsCOMPtr<nsIPresentationListener> mOpeningListener;
+  bool mOnResponding;
 };
 
 } // namespace presentation
