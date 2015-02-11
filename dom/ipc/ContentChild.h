@@ -268,7 +268,6 @@ public:
 
     virtual PPresentationChild* AllocPPresentationChild() MOZ_OVERRIDE;
     virtual bool DeallocPPresentationChild(PPresentationChild* aActor) MOZ_OVERRIDE;
-//    PPresentationChild* SendPPresentationConstructor(PresentationIPCService* aActor);
 
     virtual PAsmJSCacheEntryChild* AllocPAsmJSCacheEntryChild(
                                  const asmjscache::OpenMode& aOpenMode,

@@ -26,7 +26,6 @@
 #include "mozilla/dom/presentation/PresentationIPCService.h"
 #include "mozilla/unused.h"
 
-#include "FakePresentationDevice.h"
 #if defined(MOZ_WIDGET_GONK)
 #include <android/log.h>
 #define LOG(args...)  __android_log_print(ANDROID_LOG_INFO, "Presentation", args);
@@ -167,6 +166,7 @@ PresentationService::PresentationService()
   : mAvailable(false)
   , mPendingSessionReady(false)
   , mSessionInfo(128)
+  , mOnResponding(false)
 {
 }
 
@@ -238,16 +238,29 @@ void
 PresentationService::NotifySessionReady(const nsAString& aId)
 {
   LOG("[Service] %s", __FUNCTION__);
-  if (!mListeners.Length()) {
-    mPendingSessionReady = true;
-    mPendingSessionId = aId;
-    return;
-  }
+  //XXX hack for multiple session on receiver side
+  if (XRE_GetProcessType() != GeckoProcessType_Default) {
+    if (!mListeners.Length()) {
+      mPendingSessionReady = true;
+      mPendingSessionId = aId;
+      return;
+    }
 
-  nsTObserverArray<nsCOMPtr<nsIPresentationListener> >::ForwardIterator iter(mListeners);
-  while (iter.HasMore()) {
-    nsIPresentationListener* listener = iter.GetNext();
-    listener->NotifySessionReady(aId);
+    nsTObserverArray<nsCOMPtr<nsIPresentationListener> >::ForwardIterator iter(mListeners);
+    while (iter.HasMore()) {
+      nsIPresentationListener* listener = iter.GetNext();
+      listener->NotifySessionReady(aId);
+    }
+  } else {
+    if (!mOpeningListener) {
+      mPendingSessionReady = true;
+      mPendingSessionId = aId;
+      return;
+    }
+
+    mOpeningListener->NotifySessionReady(aId);
+    mOpeningListener = nullptr;
+    mOnResponding = false;
   }
 }
 
@@ -320,6 +333,8 @@ PresentationService::HandleSessionRequest(nsISupports* aSubject)
   if (obs) {
     obs->NotifyObservers(aSubject, "presentation-launch-receiver", nullptr);
   }
+  //XXX hack for multiple session on receiver side
+  mOnResponding = true;
 
   return NS_OK;
 }
@@ -486,6 +501,11 @@ PresentationService::RegisterListener(nsIPresentationListener* aListener)
   LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
   mListeners.AppendElement(aListener);
+
+  //XXX hack for multiple session on receiver side
+  if (mOnResponding && XRE_GetProcessType() == GeckoProcessType_Default) {
+    mOpeningListener = aListener;
+  }
 
   if (mPendingSessionReady) {
     mPendingSessionReady = false;

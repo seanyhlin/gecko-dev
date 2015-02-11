@@ -10,7 +10,6 @@ XPCSHELL_TESTS_MANIFESTS += ['tests/xpcshell/xpcshell.ini']
 MOCHITEST_MANIFESTS += ['tests/mochitest/mochitest.ini']
 
 EXPORTS.mozilla.dom.presentation += [
-		'FakePresentationDevice.h',
     'ipc/PresentationChild.h',
     'ipc/PresentationIPCService.h',
     'ipc/PresentationParent.h',
@@ -18,21 +17,20 @@ EXPORTS.mozilla.dom.presentation += [
     'PresentationDeviceManager.h',
     'PresentationService.h',
     'PresentationSession.h',
-		'PresentationSessionTransport.h',
+    'PresentationSessionTransport.h',
     'Session.h'
 ]
 
 SOURCES += [
-		'FakePresentationDevice.cpp',
-		'ipc/PresentationChild.cpp',
-		'ipc/PresentationIPCService.cpp',
+    'ipc/PresentationChild.cpp',
+    'ipc/PresentationIPCService.cpp',
     'ipc/PresentationParent.cpp',
     'Presentation.cpp',
     'PresentationDeviceManager.cpp',
     'PresentationService.cpp',
     'PresentationSession.cpp',
     'PresentationSessionRequest.cpp',
-		'PresentationSessionTransport.cpp',
+    'PresentationSessionTransport.cpp',
     'Session.cpp'
 ]
 

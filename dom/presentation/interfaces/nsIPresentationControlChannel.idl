@@ -58,7 +58,6 @@ interface nsIPresentationControlChannelListener: nsISupports
    */
   void notifyClosed(in nsresult reason);
 
-
   /*
    * The callback for notifying session ready at remote endpoint.
    */
