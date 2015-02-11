@@ -62,7 +62,6 @@ SessionCallback::SessionCallback(Presentation* aPresentation,
   , mPromise(aPromise)
   , mWindow(aWindow)
 {
-  LOG("SessionCallback, aId: %s\n", NS_ConvertUTF16toUTF8(mId).get());
 }
 
 SessionCallback::~SessionCallback()
@@ -75,7 +74,7 @@ SessionCallback::~SessionCallback()
 NS_IMETHODIMP
 SessionCallback::NotifySuccess()
 {
-  LOG("SessionCallback::NotifySuccess\n");
+  LOG("SessionCallback::NotifySuccess");
   MOZ_ASSERT(NS_IsMainThread());
   nsRefPtr<PresentationSession> session = PresentationSession::Create(mWindow,
                                                                       mId);
@@ -90,7 +89,6 @@ SessionCallback::NotifySuccess()
 
   nsAutoString id;
   session->GetId(id);
-  LOG("id: %s\n", NS_ConvertUTF16toUTF8(id).get());
   mPromise->MaybeResolve(session);
   mPromise = nullptr;
   return NS_OK;
@@ -99,7 +97,7 @@ SessionCallback::NotifySuccess()
 NS_IMETHODIMP
 SessionCallback::NotifyError(const nsAString& aError)
 {
-  LOG("SessionCallback::NotifyError, %s\n", NS_ConvertUTF16toUTF8(aError).get());
+  LOG("SessionCallback::NotifyError, %s", NS_ConvertUTF16toUTF8(aError).get());
   MOZ_ASSERT(NS_IsMainThread());
   mPromise->MaybeRejectBrokenly(aError);
   return NS_OK;
@@ -183,7 +181,7 @@ Presentation::StartSession(const nsAString& aUrl,
                                     const Optional<nsAString>& aId,
                                     ErrorResult& aRv)
 {
-  LOG("StartSession\n");
+  LOG("StartSession");
   // Get origin.
   nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
   if (NS_WARN_IF(!global)) {
@@ -292,14 +290,12 @@ Presentation::GetSession() const
 bool
 Presentation::Available() const
 {
-  LOG("Presentation::Available %d", mAvailable);
   return mAvailable;
 }
 
 NS_IMETHODIMP
 Presentation::NotifyAvailableChange(bool aAvailable)
 {
-  LOG("Presentation::NotifyAvailableChange, %d", aAvailable);
   mAvailable = aAvailable;
   DispatchTrustedEvent(AVAILABLECHANGE_EVENT_NAME);
   return NS_OK;

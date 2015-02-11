@@ -68,19 +68,6 @@ PresentationSession::Init()
     return false;
   }
 
-  // Initialize |mOrigin|.
-  nsCOMPtr<nsIGlobalObject> global = do_QueryInterface(GetOwner());
-  NS_ENSURE_TRUE(global, false);
-
-  nsIPrincipal* principal = global->PrincipalOrNull();
-  NS_ENSURE_TRUE(principal, false);
-
-  nsAutoCString origin;
-  nsresult rv = principal->GetOrigin(getter_Copies(origin));
-  NS_ENSURE_SUCCESS(rv, false);
-
-  mOrigin = NS_ConvertUTF8toUTF16(origin);
-
   // Register session listener.
   nsRefPtr<PresentationService> service = PresentationService::Get();
   NS_ENSURE_TRUE(service, false);
@@ -121,7 +108,6 @@ void
 PresentationSession::Send(const nsAString& aData,
                           ErrorResult& aRv)
 {
-  LOG("[PresentationSession] %s", __FUNCTION__);
   // Sending is not allowed if the socket is not connected.
   if (NS_WARN_IF(!mState)) {
     aRv.Throw(NS_ERROR_DOM_INVALID_STATE_ERR);
@@ -179,7 +165,6 @@ PresentationSession::Disconnect(ErrorResult& aRv)
 nsresult
 PresentationSession::SetState(bool aState)
 {
-  LOG("[PresentationSession] %s", __FUNCTION__);
   if (mState == aState) {
     return NS_OK;
   }
@@ -225,7 +210,6 @@ NS_IMETHODIMP
 PresentationSession::NotifyMessage(const nsAString& aSessionId,
                                    const nsACString& aData)
 {
-  LOG("[PresentationSession] %s", __FUNCTION__);
   if (mId != aSessionId) {
     return NS_OK;
   }
@@ -255,19 +239,6 @@ PresentationSession::NotifyMessage(const nsAString& aSessionId,
 nsresult
 PresentationSession::DispatchMessageEvent(JS::Handle<JS::Value> aData)
 {
-  LOG("[PresentationSession] %s", __FUNCTION__);
-/*  nsCOMPtr<nsIDOMEvent> event;
-  nsresult rv = NS_NewDOMMessageEvent(getter_AddRefs(event), this, nullptr, nullptr);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIDOMMessageEvent> messageEvent = do_QueryInterface(event);
-  rv = messageEvent->InitMessageEvent(NS_LITERAL_STRING("message"),
-                                      false, false, aData, mOrigin,
-                                      EmptyString(), nullptr);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  event->SetTrusted(true);
-  return DispatchDOMEvent(nullptr, event, nullptr, nullptr);*/
   PresentationMessageEventInit init;
   init.mData = aData;
   nsRefPtr<PresentationMessageEvent> event =

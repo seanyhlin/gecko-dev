@@ -536,7 +536,6 @@ Session::CreateResponder(const nsAString& aId,
 nsresult
 Session::Send(nsIInputStream* aData)
 {
-  LOG("[Session] %s", __FUNCTION__);
   NS_ENSURE_TRUE(mTransport, NS_ERROR_NOT_AVAILABLE);
 
   return mTransport->Send(aData);
@@ -565,7 +564,6 @@ Session::OnComplete()
 NS_IMETHODIMP
 Session::OnData(const nsACString& aData)
 {
-  LOG("[Session] %s", __FUNCTION__);
   mService->OnSessionMessage(this, aData);
   return NS_OK;
 }

@@ -32,9 +32,7 @@ static bool sIsActorDead = false;
 /* static */ already_AddRefed<PresentationIPCService>
 PresentationIPCService::Create()
 {
-  LOG("[IPCService] %s", __FUNCTION__);
   if (sIsActorDead) {
-    LOG("[IPCService] actor is dead");
     return nullptr;  
   }
 
@@ -74,7 +72,6 @@ PresentationIPCService::JoinSessionInternal(const nsAString& aUrl,
                                             const nsAString& aSessionId,
                                             const nsAString& aOrigin)
 {
-  LOG("[IPCService] %s", __FUNCTION__);
   return NS_OK;
 }
 
@@ -82,7 +79,6 @@ PresentationIPCService::JoinSessionInternal(const nsAString& aUrl,
 PresentationIPCService::SendMessageInternal(const nsAString& aSessionId,
                                             nsIInputStream* aStream)
 {
-  LOG("[IPCService] %s", __FUNCTION__);
   if (aSessionId.IsEmpty()) {
     return NS_ERROR_INVALID_ARG;
   }
@@ -112,7 +108,6 @@ nsresult
 PresentationIPCService::SendRequest(nsIPresentationRequestCallback* aCallback,
                                     const PresentationRequest& aRequest)
 {
-  LOG("[IPCService] %s", __FUNCTION__);
   if (sPresentationChild) {
     PresentationRequestChild* actor = new PresentationRequestChild(aCallback);
     sPresentationChild->SendPPresentationRequestConstructor(actor, aRequest);
@@ -189,7 +184,6 @@ nsresult
 PresentationIPCService::NotifyMessage(const nsAString& aSessionId,
                                       const nsACString& aData)
 {
-  LOG("[IPCService] %s", __FUNCTION__);
   nsCOMPtr<nsIPresentationSessionListener> listener;
   if (NS_WARN_IF(!mSessionListeners.Get(aSessionId, getter_AddRefs(listener)))) {
     return NS_OK;

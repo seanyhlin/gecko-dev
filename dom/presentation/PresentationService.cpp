@@ -222,11 +222,6 @@ PresentationService::HandleShutdown()
 void
 PresentationService::NotifyAvailableListeners(bool aAvailable)
 {
-  LOG("[Service] %s", __FUNCTION__);
-  if (!mListeners.Length()) {
-    LOG("[Service] No listenr is registered.");
-  }
-
   nsTObserverArray<nsCOMPtr<nsIPresentationListener> >::ForwardIterator iter(mListeners);
   while (iter.HasMore()) {
     nsIPresentationListener* listener = iter.GetNext();
@@ -459,7 +454,6 @@ PresentationService::JoinSessionInternal(const nsAString& aUrl,
 PresentationService::SendMessageInternal(const nsAString& aSessionId,
                                          nsIInputStream* aStream)
 {
-  LOG("[Service] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   if (aSessionId.IsEmpty()) {
@@ -644,7 +638,6 @@ PresentationService::OnSessionClose(Session* aSession, nsresult aReason)
 nsresult
 PresentationService::OnSessionMessage(Session* aSession, const nsACString& aMessage)
 {
-  LOG("[Service] %s", __FUNCTION__);
   NS_ENSURE_ARG(aSession);
 
   SessionInfo* info = mSessionInfo.Get(aSession->Id());

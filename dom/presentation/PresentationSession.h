@@ -63,7 +63,6 @@ private:
 
   nsString mId;
   bool mState;
-  nsString mOrigin;
 };
 
 } // namespace presentation

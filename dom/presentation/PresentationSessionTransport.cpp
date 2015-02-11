@@ -71,7 +71,6 @@ PresentationSessionTransport::~PresentationSessionTransport()
 NS_IMETHODIMP
 PresentationSessionTransport::Send(nsIInputStream* aData)
 {
-  LOG("[SessionTransport] %s", __FUNCTION__);
   mMultiplexStream->AppendStream(aData);
 
   nsCOMPtr<nsIEventTarget> sts = do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
@@ -99,10 +98,10 @@ PresentationSessionTransport::OnTransportStatus(nsITransport* aTransport,
                                                 int64_t aProgress,
                                                 int64_t aProgressMax)
 {
-  LOG("[SessionTransport] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   if (aStatus == NS_NET_STATUS_CONNECTED_TO) {
+    LOG("[SessionTransport] %s", __FUNCTION__);
     nsCOMPtr<nsIInputStreamPump> pump;
     NS_NewInputStreamPump(getter_AddRefs(pump), mInputStream);
 
@@ -160,7 +159,6 @@ PresentationSessionTransport::OnDataAvailable(nsIRequest* aRequest,
                                               uint64_t aOffset,
                                               uint32_t aCount)
 {
-  LOG("[SessionTransport] %s", __FUNCTION__);
   MOZ_ASSERT(NS_IsMainThread());
 
   if (mCallback) {
