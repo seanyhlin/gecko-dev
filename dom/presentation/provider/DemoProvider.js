@@ -190,11 +190,13 @@ PresentationServer.prototype = {
       }
       case "requestSession:Offer": {
         let transport = this._receivers[msg.presentationId];
-				log(JSON.stringify(Object.keys(this._receivers)));
+        log(JSON.stringify(Object.keys(this._receivers)));
         if (!transport) {
-					log("no transport for " + msg.presentationId);
+          log("no transport for " + msg.presentationId);
           return;
         }
+        //XXX android device cannot get self ip.
+				msg.offer.tcpAddresses[0] = device.ip;
         transport.onOffer(msg.offer);
         break;
       }
